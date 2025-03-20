@@ -41,6 +41,20 @@ export default function TodoApp() {
     setSelectedCategory(category); // Update the selected category
   };
 
+  const handleCheckboxChange = (itemId: number, completed: boolean) => {
+    setItems(
+      (items) =>
+        items?.map((item) =>
+          item.itemId === itemId
+            ? {
+                ...item,
+                completed,
+              }
+            : item
+        ) ?? []
+    );
+  };
+
   const handlePopoverOpen = (
     event: React.MouseEvent<HTMLElement>,
     itemId: number
@@ -419,7 +433,7 @@ export default function TodoApp() {
 
   return (
     <>
-      {typeof window !== "undefined" && (
+      {/* {typeof window !== "undefined" && (
         <Box
           className="text-white p-2"
           sx={{
@@ -431,240 +445,247 @@ export default function TodoApp() {
             opacity: 0.5,
           }}
         ></Box>
-      )}
-      <Container
-        disableGutters
-        className="max-w-md mx-auto bg-white mt-20 h-3/4 flex flex-col"
-        sx={{
-          height: "100vh", // Explicitly set the height to 75% of the viewport
-          display: "flex",
-          flexDirection: "column",
-          maxHeight: "800px",
-        }}
-      >
-        <Box
-          className="p-2"
+      )} */}
+      {typeof window !== "undefined" && (
+        <Container
+          disableGutters
+          className="max-w-md mx-auto bg-white mt-20 h-3/4 flex flex-col"
           sx={{
-            bgcolor: "#E4EFE7",
-            height: "60px",
+            height: "100vh",
             display: "flex",
-            justifyContent: "space-between",
+            flexDirection: "column",
+            maxHeight: "800px",
           }}
         >
-          <Typography
-            className="pl-5"
-            variant="h4"
-            component="h1"
-            sx={{
-              textAlign: "left",
-              fontWeight: "bold",
-              margin: "auto 0",
-              lineHeight: "inherit",
-            }}
-          >
-            TODO LIST
-          </Typography>
           <Box
+            className="p-2"
             sx={{
+              bgcolor: "#E4EFE7",
+              height: "60px",
               display: "flex",
-              right: 0,
-              marginTop: 0,
+              justifyContent: "space-between",
             }}
           >
-            <OutlinedInput
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              sx={{ height: "100%", mr: "20px" }}
-              endAdornment={
-                <ClearIcon
-                  sx={{
-                    cursor: "pointer",
-                    visibility: search ? "visible" : "hidden",
-                    zIndex: 1,
-                  }}
-                  onClick={() => setSearch("")}
-                />
-              }
-            />
-          </Box>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "flex-start",
-            height: "100%",
-            maxHeight: "740px",
-            position: "relative",
-          }}
-        >
-          {/* Sidebar */}
-          <Box
-            sx={{
-              display: "flex",
-              flex: "0 0 250px",
-              height: "100%",
-              bgcolor: "#FDFAF6",
-              p: 2,
-              maxHeight: "740px",
-              overflow: "auto",
-            }}
-          >
-            <TodoNavSideBar
-              itemCategories={itemCategories || []}
-              onCategorySelect={handleCategorySelect} // Pass the callback
-            />
-          </Box>
-          <Box
-            sx={{
-              flex: "1",
-              position: "relative",
-              maxHeight: "740px",
-              overflow: "auto",
-              height: "100%",
-            }}
-          >
-            <Box
+            <Typography
+              className="pl-5"
+              variant="h4"
+              component="h1"
               sx={{
-                p: 1,
-                m: 1,
-                borderRadius: 1,
-                overflow: "auto",
+                textAlign: "left",
+                fontWeight: "bold",
+                margin: "auto 0",
+                lineHeight: "inherit",
               }}
             >
-              {filteredItems &&
-                filteredItems.map((todo, index) => (
-                  <Card
-                    className="flex flex-row p-1 m-1 rounded-xs"
-                    key={todo.itemId}
-                    variant="outlined"
-                    sx={{
-                      bgcolor: "#FAF1E6",
-                      border: 1,
-                      borderColor: "text.secondary",
-                      width: "50%",
-                    }}
-                  >
-                    <Box>
-                      <Checkbox
-                        defaultChecked={todo.completed}
-                        sx={{
-                          padding: "0",
-                          color: "#99BC85",
-                          "&.Mui-checked": { color: "#99BC85" },
-                        }}
-                      />
-                    </Box>
-                    <CardContent
-                      className="flex items-center"
+              TODO LIST
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                right: 0,
+                marginTop: 0,
+              }}
+            >
+              {typeof window !== "undefined" && (
+                <OutlinedInput
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search..."
+                  sx={{ height: "100%", mr: "20px" }}
+                  endAdornment={
+                    <ClearIcon
                       sx={{
-                        p: 0,
-                        "&:last-child": { pb: 0 },
+                        cursor: "pointer",
+                        visibility: search ? "visible" : "hidden",
+                        zIndex: 1,
                       }}
-                    >
-                      <Typography
-                        className="pl-1"
-                        sx={{ color: "text.secondary", fontSize: 14 }}
-                      >
-                        {todo.description}
-                      </Typography>
-                    </CardContent>
-                    <Box className="flex-grow"></Box>
-                    <CardActions
-                      className="flex justify-self-end"
-                      sx={{ p: 0, "&:last-child": { pb: 0 } }}
-                    >
-                      <IconButton
-                        sx={CAButtonStyles}
-                        onMouseEnter={(event) =>
-                          handlePopoverOpen(event, todo.itemId)
-                        }
-                        onMouseLeave={handlePopoverClose}
-                      >
-                        <InfoOutlinedIcon
-                          fontSize="small"
-                          sx={{ color: "#99BC85" }}
-                        />
-                      </IconButton>
-                      <Popover
-                        id="mouse-over-popover"
-                        sx={{ pointerEvents: "none" }}
-                        open={open && todoActive == todo.itemId}
-                        anchorEl={anchorEl}
-                        anchorOrigin={{
-                          vertical: "top",
-                          horizontal: "right",
-                        }}
-                        transformOrigin={{
-                          vertical: "top",
-                          horizontal: "left",
-                        }}
-                        onClose={handlePopoverClose}
-                        disableRestoreFocus
-                      >
-                        <Typography sx={{ p: 1 }}>
-                          <strong>
-                            {todo.categories.length > 1
-                              ? "Categories: "
-                              : "Category: "}
-                          </strong>
-                          {todo.categories.join(", ")}
-                        </Typography>
-                        <Typography sx={{ p: 1 }}>
-                          <strong>Date Added: &nbsp;</strong>
-                          {todo.dateAdded?.toLocaleString() ?? null}
-                        </Typography>
-                        <Typography sx={{ p: 1 }}>
-                          <strong>Due Date: &nbsp;</strong>
-                          {todo.dateDue?.toLocaleString() ?? null}
-                        </Typography>
-                      </Popover>
-                      <Tooltip title="Edit">
-                        <IconButton
-                          sx={CAButtonStyles}
-                          onClick={() => editTodo(todo)}
-                        >
-                          <EditIcon
-                            fontSize="small"
-                            sx={{ color: "#99BC85" }}
-                          />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          sx={CAButtonStyles}
-                          onClick={() => deleteTodo(index)}
-                        >
-                          <ClearIcon
-                            fontSize="small"
-                            sx={{ color: "#99BC85" }}
-                          />
-                        </IconButton>
-                      </Tooltip>
-                    </CardActions>
-                  </Card>
-                ))}
+                      onClick={() => setSearch("")}
+                    />
+                  }
+                />
+              )}
             </Box>
           </Box>
           <Box
             sx={{
-              "& > :not(style)": { mb: 2, mr: 3 },
-              position: "absolute",
-              bottom: 0,
-              right: 0,
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "flex-start",
+              height: "100%",
+              maxHeight: "740px",
+              position: "relative",
             }}
           >
-            <Fab color="primary" aria-label="add">
-              <AddIcon
-                onClick={() => {
-                  handleAddButton();
-                }}
+            {/* Sidebar */}
+            <Box
+              sx={{
+                display: "flex",
+                flex: "0 0 250px",
+                height: "100%",
+                bgcolor: "#FDFAF6",
+                p: 2,
+                maxHeight: "740px",
+                overflow: "auto",
+              }}
+            >
+              <TodoNavSideBar
+                itemCategories={itemCategories || []}
+                onCategorySelect={handleCategorySelect} // Pass the callback
               />
-            </Fab>
+            </Box>
+            <Box
+              sx={{
+                flex: "1",
+                position: "relative",
+                maxHeight: "740px",
+                overflow: "auto",
+                height: "100%",
+              }}
+            >
+              <Box
+                sx={{
+                  p: 1,
+                  m: 1,
+                  borderRadius: 1,
+                  overflow: "auto",
+                }}
+              >
+                {filteredItems &&
+                  filteredItems.map((todo, index) => (
+                    <Card
+                      className="flex flex-row p-1 m-1 rounded-xs"
+                      key={todo.itemId}
+                      variant="outlined"
+                      sx={{
+                        bgcolor: "#FAF1E6",
+                        border: 1,
+                        borderColor: "text.secondary",
+                        width: "50%",
+                      }}
+                    >
+                      <Box>
+                        <Checkbox
+                          checked={todo.completed}
+                          onChange={(e) =>
+                            handleCheckboxChange(todo.itemId, e.target.checked)
+                          }
+                          sx={{
+                            padding: "0",
+                            color: "#99BC85",
+                            "&.Mui-checked": { color: "#99BC85" },
+                          }}
+                        />
+                      </Box>
+                      <CardContent
+                        className="flex items-center"
+                        sx={{
+                          p: 0,
+                          "&:last-child": { pb: 0 },
+                        }}
+                      >
+                        <Typography
+                          className="pl-1"
+                          sx={{ color: "text.secondary", fontSize: 14 }}
+                        >
+                          {todo.description}
+                        </Typography>
+                      </CardContent>
+                      <Box className="flex-grow"></Box>
+                      <CardActions
+                        className="flex justify-self-end"
+                        sx={{ p: 0, "&:last-child": { pb: 0 } }}
+                      >
+                        <IconButton
+                          sx={CAButtonStyles}
+                          onMouseEnter={(event) =>
+                            handlePopoverOpen(event, todo.itemId)
+                          }
+                          onMouseLeave={handlePopoverClose}
+                        >
+                          <InfoOutlinedIcon
+                            fontSize="small"
+                            sx={{ color: "#99BC85" }}
+                          />
+                        </IconButton>
+                        <Popover
+                          id="mouse-over-popover"
+                          sx={{ pointerEvents: "none" }}
+                          open={open && todoActive == todo.itemId}
+                          anchorEl={anchorEl}
+                          anchorOrigin={{
+                            vertical: "top",
+                            horizontal: "right",
+                          }}
+                          transformOrigin={{
+                            vertical: "top",
+                            horizontal: "left",
+                          }}
+                          onClose={handlePopoverClose}
+                          disableRestoreFocus
+                        >
+                          <Typography sx={{ p: 1 }}>
+                            <strong>
+                              {todo.categories.length > 1
+                                ? "Categories: "
+                                : "Category: "}
+                            </strong>
+                            {todo.categories.join(", ")}
+                          </Typography>
+                          <Typography sx={{ p: 1 }}>
+                            <strong>Date Added: &nbsp;</strong>
+                            {todo.dateAdded?.toLocaleString() ?? null}
+                          </Typography>
+                          <Typography sx={{ p: 1 }}>
+                            <strong>Due Date: &nbsp;</strong>
+                            {todo.dateDue?.toLocaleString() ?? null}
+                          </Typography>
+                        </Popover>
+                        <Tooltip title="Edit">
+                          <IconButton
+                            sx={CAButtonStyles}
+                            onClick={() => editTodo(todo)}
+                          >
+                            <EditIcon
+                              fontSize="small"
+                              sx={{ color: "#99BC85" }}
+                            />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            sx={CAButtonStyles}
+                            onClick={() => deleteTodo(index)}
+                          >
+                            <ClearIcon
+                              fontSize="small"
+                              sx={{ color: "#99BC85" }}
+                            />
+                          </IconButton>
+                        </Tooltip>
+                      </CardActions>
+                    </Card>
+                  ))}
+              </Box>
+            </Box>
+            <Box
+              sx={{
+                "& > :not(style)": { mb: 2, mr: 3 },
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+              }}
+            >
+              <Fab color="primary" aria-label="add">
+                <AddIcon
+                  onClick={() => {
+                    handleAddButton();
+                  }}
+                />
+              </Fab>
+            </Box>
           </Box>
-        </Box>
-      </Container>
+        </Container>
+      )}
       <TodoModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
