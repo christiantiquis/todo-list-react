@@ -35,6 +35,11 @@ export default function TodoApp() {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [todoActive, setTodoActive] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // Track selected category
+
+  const handleCategorySelect = (category: string | null) => {
+    setSelectedCategory(category); // Update the selected category
+  };
 
   const handlePopoverOpen = (
     event: React.MouseEvent<HTMLElement>,
@@ -102,10 +107,19 @@ export default function TodoApp() {
   const open = Boolean(anchorEl);
 
   const filteredItems = React.useMemo(() => {
-    return items?.filter((todo) =>
-      todo.description.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [items, search]);
+    return (items || []).filter((todo) => {
+      const matchesSearch =
+        !search.trim() ||
+        todo.description?.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory =
+        !selectedCategory ||
+        todo.categories?.some(
+          (category) =>
+            category.toLowerCase() === selectedCategory.toLowerCase()
+        );
+      return matchesSearch && matchesCategory;
+    });
+  }, [items, search, selectedCategory]);
 
   useEffect(() => {
     const storedItems: Item[] = JSON.parse(
@@ -388,7 +402,7 @@ export default function TodoApp() {
   useEffect(() => {
     localStorage.setItem("item-todos", JSON.stringify(items));
     localStorage.setItem("item-categories", JSON.stringify(itemCategories));
-  }, [items, itemCategories]);
+  }, [items, itemCategories, filteredItems]);
 
   const deleteTodo = (index: number) => {
     if (!items) return;
@@ -497,7 +511,10 @@ export default function TodoApp() {
               overflow: "auto",
             }}
           >
-            <TodoNavSideBar itemCategories={itemCategories || []} />
+            <TodoNavSideBar
+              itemCategories={itemCategories || []}
+              onCategorySelect={handleCategorySelect} // Pass the callback
+            />
           </Box>
           <Box
             sx={{

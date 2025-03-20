@@ -12,9 +12,8 @@ import { ExpandLess, ExpandMore } from "@mui/icons-material";
 
 export default function TodoNavSideBar(props: {
   itemCategories: ItemCategories[];
+  onCategorySelect: (category: string | null) => void; // Add callback prop
 }) {
-  // console.log(props.itemCategories);
-
   const [open, setOpen] = useState(true);
 
   const handleClick = () => {
@@ -29,7 +28,7 @@ export default function TodoNavSideBar(props: {
         }}
       >
         <ListItem disablePadding>
-          <ListItemButton>
+          <ListItemButton onClick={() => props.onCategorySelect(null)}>
             <ListItemText primary="Home" />
           </ListItemButton>
         </ListItem>
@@ -47,7 +46,10 @@ export default function TodoNavSideBar(props: {
                 disablePadding
                 key={category?.categoryId || category?.name}
               >
-                <ListItemButton sx={{ pl: 4 }}>
+                <ListItemButton
+                  sx={{ pl: 4 }}
+                  onClick={() => props.onCategorySelect(category.name)}
+                >
                   <ListItemText primary={category?.name} />
                 </ListItemButton>
               </List>
