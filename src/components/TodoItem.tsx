@@ -3,59 +3,47 @@
 import React, { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pencil, Save, X, Info, CalendarIcon } from "lucide-react"; // Import CalendarIcon
-import { Todo } from "@/types/todo";
+import { Trash2, Pencil, Save, X, Info, CalendarIcon } from "lucide-react";
+import { categoryValue, deadline } from "@/lib/todo-store";
+import type { Todo } from "@/types/todo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Import Popover components
-import { Calendar } from "@/components/ui/calendar"; // Import Calendar component
-import { format } from "date-fns"; // Import format from date-fns
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 type TodoItemProps = {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string, newCategory: string, newDueDate?: number) => void; // Updated onEdit prop
-  onUpdateCategory: (id: string, newCategory: string) => void;
+  onEdit: (id: string, newText: string, newCategory: string, newDueDate?: number) => void;
+  now: Date;
   availableCategories: string[];
 };
 
-export function TodoItem({ todo, onToggle, onDelete, onEdit, onUpdateCategory, availableCategories }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCategories }: TodoItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(todo.text);
-  const [editedCategory, setEditedCategory] = useState(todo.category || "none");
+  const [editedCategory, setEditedCategory] = useState(todo.category ? categoryValue(todo.category) : "none");
   const [editedDueDate, setEditedDueDate] = useState<Date | undefined>(
-    todo.dueDate ? new Date(todo.dueDate) : undefined
+    todo.dueDate !== undefined ? new Date(todo.dueDate) : undefined
   );
+
+  const [error, setError] = useState("");
+  const dueStatus = deadline(todo, now);
 
   const handleSaveEdit = () => {
     if (editedText.trim() === "") {
-      // Optionally show a toast error here if text is empty
+      setError("Task text cannot be empty.");
       return;
     }
+    setError("");
     onEdit(
       todo.id,
       editedText.trim(),
-      editedCategory,
+      availableCategories.some(name => categoryValue(name) === editedCategory) ? editedCategory : "none",
       editedDueDate ? editedDueDate.getTime() : undefined
     );
     setIsEditing(false);
@@ -63,14 +51,15 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onUpdateCategory, a
 
   const handleCancelEdit = () => {
     setEditedText(todo.text);
-    setEditedCategory(todo.category || "none");
-    setEditedDueDate(todo.dueDate ? new Date(todo.dueDate) : undefined);
+    setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
+    setEditedDueDate(todo.dueDate !== undefined ? new Date(todo.dueDate) : undefined);
+    setError("");
     setIsEditing(false);
   };
 
   // Helper function to format date for display
   const formatDate = (timestamp?: number) => {
-    if (!timestamp) return "N/A";
+    if (timestamp === undefined) return "N/A";
     return new Date(timestamp).toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
@@ -81,43 +70,49 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onUpdateCategory, a
   };
 
   return (
-    <div className="flex items-center justify-between p-3 border-b last:border-b-0">
-      <div className="flex items-center space-x-3 flex-grow">
+    <div className="group flex min-w-0 flex-col gap-2 p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
         <Checkbox
           id={`todo-${todo.id}`}
           checked={todo.completed}
           onCheckedChange={() => onToggle(todo.id)}
           disabled={isEditing}
+          aria-label={`Mark ${todo.text} ${todo.completed ? "active" : "complete"}`}
         />
         {isEditing ? (
           <>
             <Input
+              aria-label="Edit task text"
+              aria-invalid={!!error}
+              aria-describedby={error ? `error-${todo.id}` : undefined}
               value={editedText}
               onChange={(e) => setEditedText(e.target.value)}
-              onKeyPress={(e) => {
+              onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleSaveEdit();
                 }
               }}
-              className="flex-grow"
+              className="min-w-0 flex-1 basis-full"
             />
-            <Select onValueChange={setEditedCategory} value={editedCategory}>
-              <SelectTrigger className="w-[120px] ml-2">
+            {error && <p id={`error-${todo.id}`} role="alert" className="w-full text-sm text-destructive">{error}</p>}
+            <Select onValueChange={setEditedCategory} value={availableCategories.some(name => categoryValue(name) === editedCategory) ? editedCategory : "none"}>
+              <SelectTrigger aria-label="Edit task category" className="w-full sm:w-40">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent className="max-h-60 overflow-y-auto z-50">
                 <SelectItem value="none">No Category</SelectItem>
                 {availableCategories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                  <SelectItem key={category} value={categoryValue(category)}>{category}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
+                  aria-label="Edit task due date"
                   variant={"outline"}
                   className={cn(
-                    "w-[120px] justify-start text-left font-normal ml-2",
+                    "w-full sm:w-auto justify-start text-left font-normal",
                     !editedDueDate && "text-muted-foreground"
                   )}
                 >
@@ -146,7 +141,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onUpdateCategory, a
           <label
             htmlFor={`todo-${todo.id}`}
             className={cn(
-              "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+              "min-w-0 flex-1 basis-3/4 break-words text-sm font-medium leading-relaxed",
               todo.completed && "line-through text-muted-foreground"
             )}
           >
@@ -154,17 +149,17 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onUpdateCategory, a
           </label>
         )}
         {todo.category && !isEditing && (
-          <Badge variant="secondary" className="ml-2">
+          <Badge variant="secondary" className="max-w-full break-all">
             {todo.category}
           </Badge>
         )}
-        {todo.dueDate && !isEditing && (
-          <Badge variant="outline" className="ml-2 text-xs">
-            Due: {format(new Date(todo.dueDate), "MMM d")}
+        {todo.dueDate !== undefined && !isEditing && (
+          <Badge variant={dueStatus === "overdue" ? "destructive" : "outline"} className="text-xs">
+            {dueStatus === "overdue" ? "Overdue:" : dueStatus === "today" ? "Today:" : "Due:"} {format(new Date(todo.dueDate), "MMM d")}
           </Badge>
         )}
       </div>
-      <div className="flex space-x-1 ml-2">
+      <div className="flex shrink-0 items-start justify-end gap-0.5">
         {isEditing ? (
           <>
             <Button variant="ghost" size="icon" onClick={handleSaveEdit} aria-label="Save changes">
@@ -176,54 +171,34 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onUpdateCategory, a
           </>
         ) : (
           <>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Todo details">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Added: {formatDate(todo.createdAt)}</p>
-                  {todo.updatedAt && <p>Updated: {formatDate(todo.updatedAt)}</p>}
-                  {todo.completedAt && <p>Completed: {formatDate(todo.completedAt)}</p>}
-                  {todo.dueDate && <p>Due: {formatDate(todo.dueDate)}</p>} {/* Display due date */}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={`Details for ${todo.text}`}><Info className="h-4 w-4" /></Button>
+              </PopoverTrigger>
+              <PopoverContent aria-label="Task details" className="text-sm">
+                <p>Added: {formatDate(todo.createdAt)}</p>
+                {todo.updatedAt !== undefined && <p>Updated: {formatDate(todo.updatedAt)}</p>}
+                {todo.completedAt !== undefined && <p>Completed: {formatDate(todo.completedAt)}</p>}
+                {todo.dueDate !== undefined && <p>Due: {formatDate(todo.dueDate)}</p>}
+              </PopoverContent>
+            </Popover>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setEditedText(todo.text);
+                setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
+                setEditedDueDate(todo.dueDate === undefined ? undefined : new Date(todo.dueDate));
+                setError(""); setIsEditing(true);
+              }}
               aria-label="Edit todo"
               disabled={todo.completed}
             >
-              <Pencil className={cn("h-4 w-4", todo.completed ? "text-muted-foreground" : "text-muted-foreground")} />
+              <Pencil className="h-4 w-4 text-muted-foreground" />
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Delete todo"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your
-                    "{todo.text}" todo item.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(todo.id)}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${todo.text}`} onClick={() => onDelete(todo.id)}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
           </>
         )}
       </div>

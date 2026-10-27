@@ -151,3 +151,39 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* A calm, warm workspace with a consistent accent in both themes. */
+@layer base {
+  :root {
+    --background: 40 30% 98%;
+    --foreground: 165 16% 15%;
+    --card: 0 0% 100%;
+    --primary: 165 52% 30%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 40 16% 94%;
+    --muted-foreground: 160 5% 43%;
+    --accent: 155 18% 92%;
+    --accent-foreground: 165 35% 22%;
+    --border: 40 12% 88%;
+    --input: 40 12% 88%;
+    --ring: 165 52% 30%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 165 12% 9%;
+    --foreground: 40 15% 94%;
+    --card: 165 10% 12%;
+    --popover: 165 10% 12%;
+    --primary: 160 43% 65%;
+    --primary-foreground: 165 25% 10%;
+    --muted: 165 8% 14%;
+    --muted-foreground: 155 8% 65%;
+    --accent: 165 12% 19%;
+    --accent-foreground: 155 20% 92%;
+    --border: 165 8% 21%;
+    --input: 165 8% 24%;
+    --ring: 160 43% 65%;
+    --destructive: 0 65% 60%;
+  }
+  body { font-family: "Segoe UI", Arial, sans-serif; }
+}
