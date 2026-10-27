@@ -1,60 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <img src="public/todolizt-logo.png" alt="TodoLizt checklist logo" width="72" height="72" />
+</p>
 
-## Getting Started
+<h1 align="center">TodoLizt</h1>
+<p align="center">Your tasks, a little clearer.</p>
 
-First, run the development server:
+TodoLizt is a personal task manager built with Next.js, React, and TypeScript.
+Plan your day, organize tasks into lists, and track deadlines in a responsive
+workspace with light and dark themes. Tasks are saved in your browser, with
+exportable backups, a 30-day Trash, and protection against conflicting tab edits.
 
-```bash
-npm install --legacy-peer-deps
+[Deployment workflow](https://github.com/christiantiquis/todo-list-react/actions/workflows/nextjs.yml)
+· [Report an issue](https://github.com/christiantiquis/todo-list-react/issues)
+
+## Features
+
+- **Daily focus:** My Day brings together tasks due today and overdue tasks.
+- **Task management:** Add, edit, complete, and delete tasks with optional lists and due dates.
+- **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, and your lists.
+- **Search and sorting:** Search within the current view; sort by deadline, newest first, or alphabetically.
+- **Custom lists:** Create your own lists alongside Work, Personal, and Shopping.
+- **Recoverable deletion:** Restore individual tasks or matching groups from Trash for 30 days, with a quick Undo after deletion.
+- **Portable backups:** Export JSON backups and preview validated imports before merging them.
+- **Safer multi-tab use:** Tabs refresh when saved data changes; stale edits cannot silently overwrite a newer task.
+- **Responsive appearance:** Mobile navigation, keyboard-accessible controls, and light, dark, or system themes.
+
+## How to use it
+
+1. Open **My Day** and type a task into the task composer. Press Enter or select **Add**.
+2. Expand **List & due date** to choose a list, change the deadline, or clear it.
+3. Check a task to complete it, or use its edit and details buttons.
+4. Select the **+** beside **Your lists** to create or manage custom lists.
+5. Open **Data & backup** near the bottom of the sidebar to download or import a backup.
+
+New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
+selected list when you are browsing a list. My Day excludes undated tasks;
+**All Tasks** is where you can find everything. Upcoming shows active tasks due
+after today. Deadlines use your browser's local calendar, and undated tasks sort
+last when sorting by due date. Search applies only to the current view.
+
+## Where your tasks are saved
+
+TodoLizt uses **local storage in your browser**. No account or backend database is
+required, and task data is not uploaded by the app.
+
+- Tasks survive page refreshes and application restarts on the same browser profile and origin.
+- Another device, browser profile, or website origin has a separate task collection.
+- People sharing a browser profile and origin share the same stored tasks.
+- Clearing site data removes tasks, Trash, and local recovery copies. Downloaded backups remain separate.
+- There is no account login, cloud sync, background reminder service, or installable offline app at present.
+
+Download backups periodically if you rely on TodoLizt for everyday tasks. A copy
+in browser storage alone is not a backup against clearing that browser's data.
+
+### Backups and recovery
+
+Open **Data & backup → Export backup** to download a JSON file containing tasks,
+custom lists, and unexpired Trash. To import, choose a TodoLizt backup, review the
+preview, and select **Merge backup**.
+
+Imports add missing task IDs and lists. Existing tasks, including those in Trash,
+stay unchanged. Repeating the same import does not duplicate those tasks. Invalid
+files, unsupported backup versions, and files larger than 5 MB are rejected.
+Expired Trash is skipped. Backup files are readable JSON, so keep them somewhere
+private.
+
+Deleted tasks remain in **Trash** for 30 days. Restore retains task details;
+if the original list has been removed, the task returns without a list. Expired
+items are removed from saved storage when the app is open or writes changes.
+There is no permanent-delete button.
+
+### Storage safeguards
+
+Stored data is validated before use. Invalid content is copied to a recovery key
+before replacement. If reading it or creating the copy fails, saving pauses and
+the app displays a warning. Recovery copies can be inspected through your browser's
+developer tools under **Application → Local Storage**.
+
+Updated tabs on the same origin coordinate writes through Web Locks and re-read
+the latest saved snapshot for each change. Unrelated changes are preserved. If
+another tab edits the same task, a stale edit is rejected and its draft stays
+visible. Cancel editing to load the latest task before trying again. Reload all
+open tabs after an app upgrade so they use the same storage protocol.
+
+Saving requires a current browser with Web Locks, served over **HTTPS or
+localhost**. Where coordination is unavailable, viewing and exporting remain
+available, while saving is paused.
+
+<details>
+<summary>Storage format and compatibility</summary>
+
+The current snapshot is stored under `todo-data-v1`, with tasks, custom categories,
+Trash, and a revision number. Older `todo-list` and `todo-categories` entries are
+read when no current snapshot exists; original entries are retained.
+
+Invalid content is preserved under `<original-key>.recovery.<unique-id>` before it
+can be replaced. Legacy entries and recovery copies are separate from Trash, so
+Trash expiry is not a secure erase of historical copies.
+
+The internal backup format identifier remains `daylight-backup` for compatibility
+with files created before the app was renamed to TodoLizt. Download filenames use
+`todolizt-backup-YYYY-MM-DD.json`.
+
+</details>
+
+## Run locally
+
+Use **Node.js 22.18 or newer** and npm to run the app and its TypeScript tests.
+No environment variables, database credentials, or API keys are needed.
+
+```sh
+git clone https://github.com/christiantiquis/todo-list-react.git
+cd todo-list-react
+npm ci --legacy-peer-deps
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [localhost:3000](http://localhost:3000). Saved code changes update the
+running development page automatically; refresh if necessary. Dependency or
+configuration changes may require restarting the development server.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+For a local production build:
 
-This To-Do List application now includes:
-*   **Task Management**: Add, toggle completion, edit, and delete todo items.
-*   **Categories**: Assign and manage custom categories for your tasks.
-*   **Due Dates**: Set and track deadlines for your todos.
-*   **Filtering**: Filter tasks by category and completion status.
-*   **Sorting**: Organize tasks by default order, completed last, or alphabetically.
-*   **Search**: Quickly find tasks by searching their text.
+```sh
+npm run build
+npm start
+```
 
-The interface uses system fonts so builds and previews do not require downloading fonts.
+Production changes require a fresh build and server restart. System fonts are
+used, so the build does not need to download Google Fonts.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-## Data safety and task controls
-
-Tasks stay in this browser; there is no account or device sync. Existing `todo-list`
-and `todo-categories` entries are migrated to a single validated `todo-data-v1`
-snapshot. Legacy entries are retained. Invalid saved content is copied verbatim to
-`<original-key>.recovery.<unique-id>` in local storage before replacement. If reading
-or creating that copy fails, saving is paused and the page displays a warning.
-Recovery copies can be retrieved through the browser's developer tools under
-Application > Local Storage. Clearing site data also removes these copies.
-
-My Day shows active tasks due today plus overdue tasks. Upcoming shows active
-tasks due after today, using the browser's local calendar. Due-date sorting puts undated tasks last.
-Deletion and clearing completed tasks move tasks to Trash for 30 days, with a quick Undo for 10 seconds. Task details open
-by click, touch, or keyboard. Custom category names such as `All` and `none` are supported.
-
-## Checks
-
-Use Node.js 22.18 or newer for the built-in TypeScript test runner:
+## Development checks
 
 ```sh
 npm test
@@ -62,63 +138,82 @@ npm run typecheck
 npm run build
 ```
 
-Tests cover saved-data validation and recovery, migration, edits, category deletion,
-deadline boundaries, filtering, sorting, and undo behavior.
+The test suite covers saved-data validation, legacy migration, recovery-copy
+failures, task edits, list deletion, deadline boundaries, workspace views, backup
+validation and merging, Trash expiry and restore, concurrent writes, and stale
+edit protection.
 
-## TodoLizt workspace
+`npm run lint` is listed in the package scripts, but the current repository is
+missing the ESLint dependencies needed to run it. Do not treat a successful
+production build as a completed lint check.
 
-The sidebar opens My Day, All Tasks, Upcoming, Completed, and category lists.
-Existing task categories are shown as lists without changing stored assignments.
-My Day starts the app and includes active tasks due today or earlier; it does not
-include undated tasks. All Tasks includes every task, with completed tasks collapsed.
-Search applies to the current view. Counts in the sidebar show active tasks, except
-Completed, which counts completed tasks.
+## GitHub Pages deployment
 
-The task composer assigns today's date in My Day, tomorrow's date in Upcoming,
-and the selected list when browsing a list. Expand "List & due date" to change or
-clear those defaults. If you choose a date outside the current view, a notification
-points you to All Tasks. Manage lists with the plus button beside "Your lists".
-The mobile header's menu button opens navigation. Light, dark, and system themes
-remain available in the header.
+The [Pages workflow](.github/workflows/nextjs.yml) runs automatically on pushes to
+**main**. It can also be started manually from the repository's **Actions** tab.
 
-## Backups, Trash, and multiple tabs
+1. Set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
+2. Commit and push changes to `main`.
+3. Open **Actions → Deploy Next.js site to Pages** and check the result.
+4. Use the published deployment URL shown by GitHub Pages or the deployment job.
 
-Open **Data & backup** at the bottom of the sidebar to export a versioned JSON
-backup or choose a backup to import. Backups include tasks, custom lists, and
-unexpired Trash. Import validates the entire file and previews the number of new
-tasks before you select **Merge backup**. Files larger than 5 MB or unsupported
-formats are rejected. Existing IDs are kept unchanged, including deleted tasks;
-import never replaces current tasks or resurrects tasks already in Trash. Repeating
-an import does not duplicate those tasks. Downloaded backups are readable files;
-keep them in a private location.
+Saving files locally does not update the deployed website. A deployment happens
+only after the changes reach GitHub and the workflow succeeds.
 
-**Trash** offers individual and bulk restore for 30 days after deletion. Expired
-items are filtered immediately and pruned from saved storage on startup, while the
-app is open, and before writes. Restoring keeps completion and deadline details.
-If the original list no longer exists, the task is restored without a list.
-There is no permanent-delete button. Historical legacy entries and recovery copies
-are retained separately; Trash expiry is not a secure erase of those copies.
+The workflow installs dependencies, runs `actions/configure-pages` for Next.js,
+builds the site, uploads `out/`, and deploys the Pages artifact. It currently uses
+Node.js 20 for deployment and does not run `npm test` or `npm run typecheck` as
+separate steps. The local test instructions above require the newer Node version.
 
-Updated tabs on the same browser origin coordinate all writes with Web Locks,
-re-read the latest snapshot before changing it, and refresh from storage events.
-Unrelated changes are combined. Editing the same task from a stale draft is rejected
-without overwriting the newer task; cancel editing to load the latest version.
-Failed saves keep the draft instead of displaying an unsaved change as successful.
-A cleared or rolled-back snapshot cannot be silently recreated by a stale tab.
+**Deployment requirements:** GitHub Pages needs a static export. The workflow
+expects `out/` and relies on the Pages setup action for deployment configuration;
+the checked-in `next.config.ts` does not explicitly enable static export. For a
+project hosted under `/todo-list-react/`, verify that public image and favicon URLs
+include the deployment base path. These URLs currently start at `/`, so they need
+attention for subdirectory hosting. Check the deployed site rather than assuming
+that a successful local server build proves the Pages configuration works. See the
+[Next.js basePath guide](https://nextjs.org/docs/app/api-reference/config/next-config-js/basePath)
+for image URL requirements under a subdirectory.
 
-Saving requires Web Locks in a current browser over HTTPS or localhost. Where
-coordination is unavailable, the app permits viewing and exporting but pauses
-writes. After upgrading an already open app, reload all its tabs so every tab uses
-the same storage protocol. This protects same-origin tabs, not different browsers,
-devices, or older versions of the app. Data still lives in `todo-data-v1`, with
-backwards-compatible Trash and revision fields; accounts and cloud sync are not
-included. Clearing site data removes saved tasks, Trash, and local recovery copies.
+## Project structure
 
-## Icon credit
+```text
+src/
+  app/                      Page, layout, theme styles, and favicon
+  components/
+    TodoList.tsx            Sidebar workspace and task composer
+    TodoItem.tsx            Task editing, completion, and details
+    BackupDialog.tsx        Backup export and import preview
+    TrashPanel.tsx          Deleted-task search and restore
+    ui/                     Shared interface components
+  hooks/use-todos.ts        Task actions, storage state, and tab updates
+  lib/todo-store.ts         Validation, transactions, backups, and task helpers
+  types/todo.ts             Task data type
+public/                     Logo and touch/browser icons
+tests/                     Storage and task behavior tests
+.github/workflows/          GitHub Pages deployment workflow
+```
 
-TodoLizt uses the [Checklist icon by Freepik from Flaticon](https://www.flaticon.com/free-icon/checklist_4704608)
-for its sidebar logo, favicon, and Apple touch icon. The source page lists the
-[Flaticon License](https://www.flaticon.com/legal#nav-flaticon) as free for personal
-and commercial use with attribution. The footer includes the author credit.
-The PNG is stored locally in `public/todolizt-logo.png`; the other icon files are
-resized versions. Keep the attribution when distributing the app.
+## Built with
+
+Next.js 15 · React 19 · TypeScript · Tailwind CSS · Radix UI · next-themes ·
+Zod · date-fns · Sonner · Lucide
+
+## Contributing
+
+Bug reports and focused improvements are welcome through
+[issues](https://github.com/christiantiquis/todo-list-react/issues) and pull requests.
+Include reproduction steps for bugs and run the relevant checks before submitting
+a change. Use sample task data and exclude personal backups from contributions.
+
+## Icon credit and licensing
+
+The logo, favicon, and Apple touch icon use the
+[Checklist icon by Freepik from Flaticon](https://www.flaticon.com/free-icon/checklist_4704608).
+The source lists it as free for personal and commercial use with attribution under
+the [Flaticon License](https://www.flaticon.com/legal#nav-flaticon). The app footer
+includes the credit; retain it when redistributing the app. Icon sizes are derived
+from the locally stored PNG.
+
+The repository does not currently include a project license file. The icon's
+license is separate from any license that may later be selected for the app code.
