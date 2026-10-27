@@ -160,20 +160,42 @@ The [Pages workflow](.github/workflows/nextjs.yml) runs automatically on pushes 
 Saving files locally does not update the deployed website. A deployment happens
 only after the changes reach GitHub and the workflow succeeds.
 
-The workflow installs dependencies, runs `actions/configure-pages` for Next.js,
-builds the site, uploads `out/`, and deploys the Pages artifact. It currently uses
-Node.js 20 for deployment and does not run `npm test` or `npm run typecheck` as
-separate steps. The local test instructions above require the newer Node version.
+The workflow gets the site's base path from `actions/configure-pages` and passes
+it to the build as `NEXT_PUBLIC_BASE_PATH`. It also sets `STATIC_EXPORT=true`,
+which explicitly enables static export and disables server-side image optimization.
+Logo and favicon URLs use the same base path, so a project deployment under
+`/todo-list-react/` loads its own assets rather than the parent site's icons.
+Custom-domain or user-site deployments can use the empty base path reported by Pages.
 
-**Deployment requirements:** GitHub Pages needs a static export. The workflow
-expects `out/` and relies on the Pages setup action for deployment configuration;
-the checked-in `next.config.ts` does not explicitly enable static export. For a
-project hosted under `/todo-list-react/`, verify that public image and favicon URLs
-include the deployment base path. These URLs currently start at `/`, so they need
-attention for subdirectory hosting. Check the deployed site rather than assuming
-that a successful local server build proves the Pages configuration works. See the
-[Next.js basePath guide](https://nextjs.org/docs/app/api-reference/config/next-config-js/basePath)
-for image URL requirements under a subdirectory.
+After building, `scripts/check-pages-export.cjs` checks the generated page's asset
+references, including the logo and favicon. The workflow stops before deployment
+if an asset points outside the site's base path or is missing from `out/`.
+
+The deployment workflow currently uses Node.js 20 and does not run `npm test` or
+`npm run typecheck` as separate steps. Local TypeScript tests require Node.js 22.18
+or newer, as described above.
+
+To reproduce the project-site export locally in PowerShell:
+
+```powershell
+$env:NEXT_PUBLIC_BASE_PATH = '/todo-list-react'
+$env:STATIC_EXPORT = 'true'
+npm run build
+node scripts/check-pages-export.cjs /todo-list-react
+```
+
+In a POSIX shell, set the variables for the build command:
+
+```sh
+NEXT_PUBLIC_BASE_PATH=/todo-list-react STATIC_EXPORT=true npm run build
+node scripts/check-pages-export.cjs /todo-list-react
+```
+
+Serve `out/` under the same `/todo-list-react/` URL prefix when previewing that
+export. `npm start` is for the normal server build; static exports need static
+hosting. Unset the two variables and rebuild before returning to the normal local
+server workflow. The [Next.js basePath guide](https://nextjs.org/docs/app/api-reference/config/next-config-js/basePath)
+explains the image URL requirements for subdirectory deployments.
 
 ## Project structure
 
@@ -191,6 +213,7 @@ src/
   types/todo.ts             Task data type
 public/                     Logo and touch/browser icons
 tests/                     Storage and task behavior tests
+scripts/                    Exported asset path verification
 .github/workflows/          GitHub Pages deployment workflow
 ```
 

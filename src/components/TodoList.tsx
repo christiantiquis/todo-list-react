@@ -7,6 +7,7 @@ import { ArrowDownWideNarrow, CalendarDays, CheckCheck, ChevronDown, CircleCheck
 import { toast } from "sonner";
 import { useTodos } from "@/hooks/use-todos";
 import { categoryValue, deadline, decodeCategory, predefinedCategories, workspaceTodos } from "@/lib/todo-store";
+import { assetPath } from "@/lib/asset-path";
 import { cn } from "@/lib/utils";
 import { TodoItem } from "@/components/TodoItem";
 import { BackupDialog } from "@/components/BackupDialog";
@@ -105,7 +106,7 @@ export function TodoList() {
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className={cn("border-b bg-muted/40 lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:flex lg:flex-col", mobileNav ? "block" : "hidden lg:flex")} aria-label="Task navigation">
         <div className="flex items-center justify-between p-6 pb-8">
-          <div className="flex items-center gap-3"><Image src="/todolizt-logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" /><span className="text-xl font-semibold tracking-tight">TodoLizt<span className="text-primary">.</span></span></div>
+          <div className="flex items-center gap-3"><Image src={assetPath("/todolizt-logo.png")} alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" /><span className="text-xl font-semibold tracking-tight">TodoLizt<span className="text-primary">.</span></span></div>
           <Button className="lg:hidden" variant="ghost" size="icon" aria-label="Close navigation" onClick={() => setMobileNav(false)}><X className="h-4 w-4" /></Button>
         </div>
         <nav className="space-y-1 px-3" aria-label="Views">
