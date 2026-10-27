@@ -99,3 +99,138 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
   assert.equal(ids('all').length, 5);
   assert.equal(workspaceTodos(tasks, 'day', 'missing', 'default', now).length, 0);
 });
+const {
+  DATA_KEY, TRASH_RETENTION_MS, MAX_BACKUP_BYTES, emptyTodoData, trashTodos,
+  restoreTrash, pruneTrash, createBackup, parseBackup, mergeBackup,
+  commitTodoChange, assertTaskUnchanged, TodoConflictError,
+} = require('../src/lib/todo-store.ts');
+const now = new Date(2026, 9, 27, 12).getTime();
+const dataWith = (todos = []) => ({ ...emptyTodoData(), todos });
+function queuedLocks() {
+  let tail = Promise.resolve();
+  return { request(_name, callback) {
+    const result = tail.then(callback);
+    tail = result.catch(() => {});
+    return result;
+  } };
+}
+test('existing snapshot without Trash or revisions migrates without changing tasks', () => {
+  const saved = storage({ [DATA_KEY]: JSON.stringify({ todos: [task()], customCategories: ['Projects'] }) });
+  const loaded = loadTodoData(saved);
+  assert.equal(loaded.revision, 0);
+  assert.deepEqual(loaded.data.trash, []);
+  assert.deepEqual(loaded.data.todos, [task()]);
+});
+test('deleting tasks moves them to Trash once and retains their details', () => {
+  const original = task({ category: 'Work', dueDate: now, completed: true, completedAt: now });
+  const removed = trashTodos(dataWith([original, task({ id: 'two' })]), ['one'], now);
+  assert.deepEqual(removed.todos.map(t => t.id), ['two']);
+  assert.deepEqual(removed.trash, [{ todo: original, deletedAt: now }]);
+  assert.equal(trashTodos(removed, ['one'], now).trash.length, 1);
+});
+test('Trash survives save/reload and restores all task fields', () => {
+  const saved = storage();
+  const original = task({ category: 'Work', dueDate: now, completed: true, completedAt: now });
+  saveTodoData(saved, trashTodos(dataWith([original]), ['one'], now));
+  const restored = restoreTrash(loadTodoData(saved).data, ['one'], now + 1);
+  assert.deepEqual(restored.todos, [original]);
+  assert.deepEqual(restored.trash, []);
+  assert.equal(restoreTrash(restored, ['one'], now + 1).todos.length, 1);
+});
+test('Trash expires at exactly 30 days; expired entries cannot be restored', () => {
+  const data = trashTodos(dataWith([task()]), ['one'], now);
+  assert.equal(pruneTrash(data, now + TRASH_RETENTION_MS - 1).trash.length, 1);
+  assert.equal(pruneTrash(data, now + TRASH_RETENTION_MS).trash.length, 0);
+  assert.equal(restoreTrash(data, ['one'], now + TRASH_RETENTION_MS).todos.length, 0);
+});
+test('restoring a task whose list was removed leaves it unassigned', () => {
+  const data = trashTodos({ ...dataWith([task({ category: 'Project' })]), customCategories: ['Project'] }, ['one'], now);
+  const deleted = deleteCategory(data, 'Project');
+  assert.equal(deleted.trash.length, 1);
+  assert.equal(restoreTrash(deleted, ['one'], now).todos[0].category, undefined);
+});
+test('backup round-trip includes active, completed, custom lists, and Trash', () => {
+  const data = trashTodos({ ...dataWith([task(), task({ id: 'done', completed: true }), task({ id: 'deleted' })]), customCategories: ['All'] }, ['deleted'], now);
+  const backup = createBackup(data, now);
+  assert.deepEqual(parseBackup(backup, now), data);
+  assert.equal(JSON.parse(backup).version, 1);
+});
+test('malformed, unsupported, duplicate, and oversized backups are rejected', () => {
+  assert.throws(() => parseBackup('invalid', now), /JSON/);
+  const good = JSON.parse(createBackup(dataWith([task()]), now));
+  for (const invalid of [
+    { ...good, version: 2 },
+    { ...good, format: 'other-app' },
+    { ...good, data: { ...good.data, todos: [task({ completed: 'yes' })] } },
+    { ...good, data: { ...good.data, todos: [task(), task()] } },
+    { ...good, data: { ...good.data, trash: [{ todo: task(), deletedAt: now }] } },
+  ]) assert.throws(() => parseBackup(JSON.stringify(invalid), now), /supported/);
+  assert.throws(() => parseBackup(' '.repeat(MAX_BACKUP_BYTES + 1), now), /5 MB/);
+});
+test('backup export/import excludes expired Trash', () => {
+  const data = trashTodos(dataWith([task()]), ['one'], now);
+  const backup = createBackup(data, now);
+  assert.equal(parseBackup(backup, now + TRASH_RETENTION_MS).trash.length, 0);
+  assert.equal(JSON.parse(createBackup(data, now + TRASH_RETENTION_MS)).data.trash.length, 0);
+});
+test('import never overwrites active or deleted IDs and is repeatable', () => {
+  const current = trashTodos(dataWith([task({ text: 'Keep current' }), task({ id: 'deleted' })]), ['deleted'], now);
+  const incoming = { ...dataWith([task({ text: 'Old content' }), task({ id: 'deleted' }), task({ id: 'new', category: 'Project' })]), customCategories: ['Project'] };
+  const merged = mergeBackup(current, incoming, now);
+  assert.equal(merged.todos.find(t => t.id === 'one').text, 'Keep current');
+  assert.equal(merged.todos.some(t => t.id === 'deleted'), false);
+  assert.equal(merged.trash.length, 1);
+  assert.ok(merged.customCategories.includes('Project'));
+  assert.deepEqual(mergeBackup(merged, incoming, now), merged);
+});
+test('concurrent tab changes are serialized and preserve distinct additions', async () => {
+  const saved = storage();
+  const locks = queuedLocks();
+  await Promise.all(Array.from({ length: 30 }, (_, index) => commitTodoChange(saved, locks,
+    current => ({ ...current, todos: [...current.todos, task({ id: String(index) })] }), now)));
+  const result = loadTodoData(saved);
+  assert.equal(result.data.todos.length, 30);
+  assert.equal(result.revision, 30);
+});
+test('unrelated edits merge, while a stale edit to the same task is rejected', async () => {
+  const saved = storage();
+  saveTodoData(saved, dataWith([task(), task({ id: 'two' })]));
+  const locks = queuedLocks();
+  const baseline = task();
+  await commitTodoChange(saved, locks, current => ({ ...current, todos: editTodo(current.todos, 'two', 'Other change') }), now);
+  await commitTodoChange(saved, locks, current => {
+    assertTaskUnchanged(current, baseline);
+    return { ...current, todos: editTodo(current.todos, 'one', 'First edit') };
+  }, now);
+  await assert.rejects(() => commitTodoChange(saved, locks, current => {
+    assertTaskUnchanged(current, baseline);
+    return { ...current, todos: editTodo(current.todos, 'one', 'Stale edit') };
+  }, now), TodoConflictError);
+  assert.deepEqual(loadTodoData(saved).data.todos.map(t => t.text), ['First edit', 'Other change']);
+});
+test('saving fails safely without tab locks or when storage is full', async () => {
+  const saved = storage();
+  await assert.rejects(() => commitTodoChange(saved, undefined, current => current, now), /coordination/);
+  assert.equal(saved.values.size, 0);
+  saveTodoData(saved, dataWith([task()]));
+  const original = saved.getItem(DATA_KEY);
+  saved.setItem = () => { throw new Error('Quota exceeded'); };
+  await assert.rejects(() => commitTodoChange(saved, queuedLocks(), current => trashTodos(current, ['one'], now), now), /Quota/);
+  assert.equal(saved.getItem(DATA_KEY), original);
+});
+test('revision guards prevent recreating cleared or rolled-back data', async () => {
+  const saved = storage();
+  saveTodoData(saved, dataWith([task()]), 3);
+  await assert.rejects(() => commitTodoChange(saved, queuedLocks(), current => current, now, { minimumRevision: 4 }), TodoConflictError);
+  saved.values.delete(DATA_KEY);
+  await assert.rejects(() => commitTodoChange(saved, queuedLocks(), current => current, now, { requireExisting: true }), TodoConflictError);
+  assert.equal(saved.getItem(DATA_KEY), null);
+});
+test('compare-before-save rejects a writer that changes the snapshot without the lock', () => {
+  const saved = storage();
+  saveTodoData(saved, dataWith([task()]));
+  const loaded = loadTodoData(saved);
+  saveTodoData(saved, dataWith([task({ text: 'Newer' })]), 1);
+  assert.throws(() => saveTodoData(saved, loaded.data, 1, loaded.raw), TodoConflictError);
+  assert.equal(loadTodoData(saved).data.todos[0].text, 'Newer');
+});

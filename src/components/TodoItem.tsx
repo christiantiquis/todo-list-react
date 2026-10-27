@@ -18,13 +18,15 @@ type TodoItemProps = {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string, newCategory: string, newDueDate?: number) => void;
+  onEdit: (id: string, newText: string, newCategory: string, newDueDate: number | undefined, expected: Todo) => Promise<boolean>;
   now: Date;
   availableCategories: string[];
 };
 
 export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCategories }: TodoItemProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [original, setOriginal] = useState(todo);
+  const [saving, setSaving] = useState(false);
   const [editedText, setEditedText] = useState(todo.text);
   const [editedCategory, setEditedCategory] = useState(todo.category ? categoryValue(todo.category) : "none");
   const [editedDueDate, setEditedDueDate] = useState<Date | undefined>(
@@ -34,19 +36,24 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
   const [error, setError] = useState("");
   const dueStatus = deadline(todo, now);
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    if (saving) return;
     if (editedText.trim() === "") {
       setError("Task text cannot be empty.");
       return;
     }
     setError("");
-    onEdit(
+    setSaving(true);
+    const saved = await onEdit(
       todo.id,
       editedText.trim(),
       availableCategories.some(name => categoryValue(name) === editedCategory) ? editedCategory : "none",
-      editedDueDate ? editedDueDate.getTime() : undefined
+      editedDueDate ? editedDueDate.getTime() : undefined,
+      original
     );
-    setIsEditing(false);
+    setSaving(false);
+    if (saved) setIsEditing(false);
+    else setError("Could not save your edit. Your draft is kept. Cancel to load the latest task, then try again.");
   };
 
   const handleCancelEdit = () => {
@@ -162,10 +169,10 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
       <div className="flex shrink-0 items-start justify-end gap-0.5">
         {isEditing ? (
           <>
-            <Button variant="ghost" size="icon" onClick={handleSaveEdit} aria-label="Save changes">
+            <Button variant="ghost" size="icon" onClick={handleSaveEdit} disabled={saving} aria-label="Save changes">
               <Save className="h-4 w-4 text-primary" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleCancelEdit} aria-label="Cancel edit">
+            <Button variant="ghost" size="icon" onClick={handleCancelEdit} disabled={saving} aria-label="Cancel edit">
               <X className="h-4 w-4 text-muted-foreground" />
             </Button>
           </>
@@ -186,6 +193,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
               variant="ghost"
               size="icon"
               onClick={() => {
+                setOriginal(todo);
                 setEditedText(todo.text);
                 setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
                 setEditedDueDate(todo.dueDate === undefined ? undefined : new Date(todo.dueDate));
