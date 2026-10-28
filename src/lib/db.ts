@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Pool } from "pg";
-import { emptyTodoData, parseTodoData, type TodoData } from "./todo-store";
+import { emptyTodoData, nextTodoData, parseTodoData, type TodoData } from "./todo-store";
 
 let pool: Pool | undefined;
 let ready: Promise<void> | undefined;
@@ -44,6 +44,15 @@ export async function insertUser(email: string, passwordHash: string) {
     [email, passwordHash],
   );
   return result.rows[0] ?? null;
+}
+
+export async function findUserIdByTokenHash(tokenHash: string): Promise<string | null> {
+  await ensureDatabase();
+  const result = await getPool().query<{ user_id: string }>(
+    "SELECT user_id FROM api_tokens WHERE token_hash = $1",
+    [tokenHash],
+  );
+  return result.rows[0]?.user_id ?? null;
 }
 
 export async function readDocument(userId: string): Promise<{ data: TodoData; revision: number }> {
@@ -92,4 +101,14 @@ export async function saveDocument(userId: string, data: TodoData, expectedRevis
   } finally {
     client.release();
   }
+}
+
+export async function updateDocument(userId: string, change: (data: TodoData) => TodoData) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const current = await readDocument(userId);
+    const data = nextTodoData(current.data, change);
+    const saved = await saveDocument(userId, data, current.revision);
+    if (saved) return saved;
+  }
+  return null;
 }

@@ -39,10 +39,11 @@ test('read and save failures are surfaced; invalid changes are never persisted',
 });
 test('editing trims text, clears optional fields, and leaves other tasks untouched', () => {
   const other = task({ id: 'two' });
-  const result = editTodo([task({ category: 'Work', dueDate: 123 }), other], 'one', '  Updated  ');
+  const result = editTodo([task({ category: 'Work', dueDate: 123, agent: 'cursor' }), other], 'one', '  Updated  ');
   assert.equal(result[0].text, 'Updated');
   assert.equal(result[0].category, undefined);
   assert.equal(result[0].dueDate, undefined);
+  assert.equal(result[0].agent, 'cursor');
   assert.equal(result[1], other);
   assert.throws(() => editTodo(result, 'one', '  '), /empty/);
 });
@@ -233,4 +234,57 @@ test('compare-before-save rejects a writer that changes the snapshot without the
   saveTodoData(saved, dataWith([task({ text: 'Newer' })]), 1);
   assert.throws(() => saveTodoData(saved, loaded.data, 1, loaded.raw), TodoConflictError);
   assert.equal(loadTodoData(saved).data.todos[0].text, 'Newer');
+});
+const {
+  addAgentTask, claimAgentTask, completeAgentTask, releaseAgentTask, selectAgentTasks, agentDueDate, AgentTaskError,
+} = require('../src/lib/todo-store.ts');
+test('agent tasks keep their owner through save, reload, and backup', () => {
+  const saved = storage();
+  const created = addAgentTask(emptyTodoData(), { text: '  Ship export  ', list: 'billing-app', agent: ' cursor ' }, now, 'task-1');
+  assert.equal(created.task.text, 'Ship export');
+  assert.equal(created.task.agent, 'cursor');
+  assert.equal(created.task.category, 'billing-app');
+  assert.deepEqual(created.data.customCategories, ['billing-app']);
+  saveTodoData(saved, created.data);
+  assert.equal(loadTodoData(saved).data.todos[0].agent, 'cursor');
+  assert.equal(parseBackup(createBackup(created.data, now), now).todos[0].agent, 'cursor');
+});
+test('a new project list is created once and a known list is reused', () => {
+  const first = addAgentTask(emptyTodoData(), { text: 'One', list: 'work' }, now, 'a');
+  assert.equal(first.task.category, 'Work');
+  assert.deepEqual(first.data.customCategories, []);
+  const second = addAgentTask(first.data, { text: 'Two', list: 'Billing-App' }, now, 'b');
+  const third = addAgentTask(second.data, { text: 'Three', list: 'billing-app' }, now, 'c');
+  assert.deepEqual(third.data.customCategories, ['Billing-App']);
+  assert.equal(third.task.category, 'Billing-App');
+});
+test('claim, complete, and release follow the owning agent', () => {
+  const created = addAgentTask(emptyTodoData(), { text: 'Open' }, now, 'task-1');
+  const claimed = claimAgentTask(created.data, 'task-1', 'cursor', now + 1);
+  assert.equal(claimed.task.agent, 'cursor');
+  assert.equal(claimAgentTask(claimed.data, 'task-1', 'cursor', now + 2).task.agent, 'cursor');
+  assert.throws(() => claimAgentTask(claimed.data, 'task-1', 'codex'), (error) => error instanceof AgentTaskError && error.status === 409 && /cursor/.test(error.message));
+  const done = completeAgentTask(created.data, 'task-1', 'codex', now + 3);
+  assert.equal(done.task.completed, true);
+  assert.equal(done.task.agent, 'codex');
+  assert.equal(done.task.completedAt, now + 3);
+  assert.throws(() => completeAgentTask(done.data, 'task-1', 'codex'), (error) => error.status === 409);
+  assert.throws(() => completeAgentTask(claimed.data, 'task-1', 'codex'), (error) => error.status === 409);
+  const released = releaseAgentTask(claimed.data, 'task-1', 'cursor', now + 4);
+  assert.equal(released.task.agent, undefined);
+  assert.throws(() => releaseAgentTask(released.data, 'task-1', 'cursor'), (error) => error.status === 409);
+  assert.throws(() => claimAgentTask(created.data, 'missing', 'cursor'), (error) => error.status === 404);
+  assert.throws(() => addAgentTask(emptyTodoData(), { text: '   ' }), (error) => error.status === 400);
+  assert.throws(() => addAgentTask(emptyTodoData(), { text: 'Ok', agent: 'x'.repeat(65) }), (error) => error.status === 400);
+  assert.equal(agentDueDate('2026-10-29'), Date.parse('2026-10-29T00:00:00.000Z'));
+  assert.equal(agentDueDate(undefined), undefined);
+  assert.throws(() => agentDueDate('tomorrow'), (error) => error.status === 400);
+});
+test('agent task queries can select open, done, and one owner', () => {
+  const open = task({ agent: 'cursor' });
+  const done = task({ id: 'two', completed: true, agent: 'codex' });
+  const other = task({ id: 'three', agent: 'cursor' });
+  assert.deepEqual(selectAgentTasks([open, done, other], 'open', 'cursor').map(todo => todo.id), ['one', 'three']);
+  assert.deepEqual(selectAgentTasks([open, done, other], 'done').map(todo => todo.id), ['two']);
+  assert.equal(selectAgentTasks([open, done, other], 'all').length, 3);
 });

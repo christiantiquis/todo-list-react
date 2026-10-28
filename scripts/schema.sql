@@ -11,3 +11,11 @@ CREATE TABLE IF NOT EXISTS todo_documents (
   data jsonb NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  token_hash text NOT NULL UNIQUE,
+  label text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);

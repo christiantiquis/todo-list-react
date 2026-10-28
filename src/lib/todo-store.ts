@@ -12,6 +12,7 @@ const todoSchema = z.object({
   id: z.string().min(1), text: z.string().trim().min(1), completed: z.boolean(),
   category: z.string().trim().min(1).optional(), createdAt: timestamp,
   updatedAt: timestamp.optional(), completedAt: timestamp.optional(), dueDate: timestamp.optional(),
+  agent: z.string().trim().min(1).max(64).optional(),
 });
 const todosSchema = z.array(todoSchema).refine(items => new Set(items.map(item => item.id)).size === items.length);
 const categoriesSchema = z.array(z.string().trim().min(1)).transform(items =>
@@ -153,6 +154,94 @@ export function mergeBackup(current: TodoData, incoming: TodoData, now = Date.no
     todos: [...current.todos, ...todos], trash: [...current.trash, ...trash],
     customCategories: [...new Set(names)].filter(name => !predefinedCategories.includes(name)),
   }, now);
+}
+export class AgentTaskError extends Error {
+  readonly status: 400 | 404 | 409;
+  constructor(message: string, status: 400 | 404 | 409) {
+    super(message);
+    this.name = "AgentTaskError";
+    this.status = status;
+  }
+}
+const agentNameSchema = z.string().trim().min(1).max(64);
+export function agentName(value: string) {
+  const parsed = agentNameSchema.safeParse(value);
+  if (!parsed.success) throw new AgentTaskError("Agent name must be 1–64 characters.", 400);
+  return parsed.data;
+}
+function activeTask(data: TodoData, id: string) {
+  const todo = data.todos.find(item => item.id === id);
+  if (!todo) throw new AgentTaskError("That task was not found.", 404);
+  return todo;
+}
+function replaceTask(data: TodoData, task: Todo): TodoData {
+  return { ...data, todos: data.todos.map(todo => todo.id === task.id ? task : todo) };
+}
+function listedTask(data: TodoData, list?: string) {
+  const trimmed = list?.trim() ?? "";
+  if (!trimmed) return { data, category: undefined as string | undefined };
+  const known = [...predefinedCategories, ...data.customCategories].find(name => name.toLowerCase() === trimmed.toLowerCase());
+  if (known) return { data, category: known };
+  return { data: { ...data, customCategories: [...data.customCategories, trimmed] }, category: trimmed };
+}
+function dueStamp(value?: number) {
+  if (value === undefined) return undefined;
+  if (!Number.isFinite(value) || Number.isNaN(new Date(value).getTime())) throw new AgentTaskError("Due date is not valid.", 400);
+  return value;
+}
+export function agentDueDate(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "number") return dueStamp(value);
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return dueStamp(Date.parse(`${value}T00:00:00.000Z`));
+  throw new AgentTaskError("Due date is not valid.", 400);
+}
+export function addAgentTask(
+  data: TodoData,
+  input: { text: string; list?: string; dueDate?: number; agent?: string },
+  now = Date.now(),
+  id = crypto.randomUUID(),
+) {
+  const text = input.text.trim();
+  if (!text) throw new AgentTaskError("Task text cannot be empty.", 400);
+  const listed = listedTask(data, input.list);
+  const owner = input.agent === undefined || input.agent.trim() === "" ? undefined : agentName(input.agent);
+  const dueDate = dueStamp(input.dueDate);
+  const task: Todo = {
+    id, text, completed: false, createdAt: now,
+    ...(listed.category ? { category: listed.category } : {}),
+    ...(dueDate !== undefined ? { dueDate } : {}),
+    ...(owner ? { agent: owner } : {}),
+  };
+  return { data: { ...listed.data, todos: [...listed.data.todos, task] }, task };
+}
+export function claimAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
+  const name = agentName(agent);
+  const todo = activeTask(data, id);
+  if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
+  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
+  const task: Todo = { ...todo, agent: name, updatedAt: now };
+  return { data: replaceTask(data, task), task };
+}
+export function completeAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
+  const name = agentName(agent);
+  const todo = activeTask(data, id);
+  if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
+  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
+  const task: Todo = { ...todo, agent: name, completed: true, completedAt: now, updatedAt: now };
+  return { data: replaceTask(data, task), task };
+}
+export function releaseAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
+  const name = agentName(agent);
+  const todo = activeTask(data, id);
+  if (todo.agent !== name) throw new AgentTaskError(todo.agent ? `Claimed by ${todo.agent}.` : "That task is not claimed by this agent.", 409);
+  const task: Todo = { ...todo, updatedAt: now };
+  delete task.agent;
+  return { data: replaceTask(data, task), task };
+}
+export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string) {
+  return todos.filter(todo =>
+    (status === "all" || (status === "done" ? todo.completed : !todo.completed)) &&
+    (!agent || todo.agent === agent));
 }
 export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number): Todo[] {
   if (!text.trim()) throw new Error("Task text cannot be empty.");

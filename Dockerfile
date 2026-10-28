@@ -26,6 +26,7 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/src/lib/password.mjs ./src/lib/password.mjs
+COPY --from=build /app/src/lib/api-token.mjs ./src/lib/api-token.mjs
 
 EXPOSE 3000
 

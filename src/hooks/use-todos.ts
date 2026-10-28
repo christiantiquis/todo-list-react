@@ -33,6 +33,7 @@ export function useTodos() {
   const [loaded, setLoaded] = useState(false);
   const [writable, setWritable] = useState(false);
   const [pending, setPending] = useState(0);
+  const busy = useRef(0);
   const [storageMessage, setStorageMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
@@ -44,7 +45,7 @@ export function useTodos() {
   const account = useRef(false);
 
   const apply = (next: TodoData, nextRevision: number, force = false) => {
-    if (!mounted.current || (!force && nextRevision < revision.current)) return;
+    if (!mounted.current || (!force && nextRevision <= revision.current)) return;
     revision.current = nextRevision;
     dataRef.current = next;
     setData(next);
@@ -55,7 +56,7 @@ export function useTodos() {
       if (notify) toast.error(error);
       return error;
     }
-    setPending(count => count + 1);
+    startWork();
     try {
       const result = account.current
         ? await saveAccountChange(dataRef.current, revision.current, change)
@@ -81,7 +82,7 @@ export function useTodos() {
       if (notify) toast.error(message);
       return message;
     } finally {
-      if (mounted.current) setPending(count => count - 1);
+      finishWork();
     }
   };
 
@@ -94,7 +95,7 @@ export function useTodos() {
     setWritable(canWrite.current);
     if (!canWrite.current) setStorageMessage("Safe saving requires HTTPS or localhost in a current browser. You can still view and export your tasks.");
   };
-  const pullAccount = async () => {
+  const pullAccount = async (force = true) => {
     const response = await fetch("/api/data");
     if (response.status === 401) throw new SessionExpired();
     if (!response.ok) throw new Error("Your account tasks could not be loaded.");
@@ -102,7 +103,15 @@ export function useTodos() {
     const parsed = parseTodoData(body.data);
     try { saveTodoData(localStorage, parsed, body.revision); } catch { /* The account copy remains available from the server. */ }
     hadDocument.current = true;
-    apply(parsed, body.revision, true);
+    apply(parsed, body.revision, force);
+  };
+  const startWork = () => {
+    busy.current += 1;
+    setPending(count => count + 1);
+  };
+  const finishWork = () => {
+    busy.current = Math.max(0, busy.current - 1);
+    if (mounted.current) setPending(count => count - 1);
   };
   const leaveAccount = () => {
     account.current = false;
@@ -189,11 +198,18 @@ export function useTodos() {
       cleanup();
     };
     const timer = window.setInterval(cleanup, 60000);
+    const poll = window.setInterval(() => {
+      if (!account.current || busy.current > 0 || document.visibilityState !== "visible") return;
+      void pullAccount(false).catch(error => {
+        if (error instanceof SessionExpired) leaveAccount();
+      });
+    }, 15000);
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", onFocus);
     return () => {
       mounted.current = false;
       window.clearInterval(timer);
+      window.clearInterval(poll);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", onFocus);
     };
@@ -225,7 +241,7 @@ export function useTodos() {
     ...data, trash: pruneTrash(data).trash, loaded, writable, busy: pending > 0, accountEmail,
     storageMessage: [storageMessage, saveError].filter(Boolean).join(" "), categories,
     async login(email: string, password: string) {
-      setPending(count => count + 1);
+      startWork();
       try {
         const response = await fetch("/api/login", {
           method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }),
@@ -246,7 +262,7 @@ export function useTodos() {
         try { openGuest(true); } catch { /* The visible list stays as it was. */ }
         return "Could not load your account tasks.";
       } finally {
-        if (mounted.current) setPending(count => count - 1);
+        finishWork();
       }
     },
     async logout() {

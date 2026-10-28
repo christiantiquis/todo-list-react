@@ -160,6 +160,11 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
             {todo.category}
           </Badge>
         )}
+        {todo.agent && !isEditing && (
+          <Badge variant="outline" className="max-w-full break-all" aria-label={`Agent ${todo.agent}`}>
+            {todo.agent}
+          </Badge>
+        )}
         {todo.dueDate !== undefined && !isEditing && (
           <Badge variant={dueStatus === "overdue" ? "destructive" : "outline"} className="text-xs">
             {dueStatus === "overdue" ? "Overdue:" : dueStatus === "today" ? "Today:" : "Due:"} {format(new Date(todo.dueDate), "MMM d")}
@@ -184,6 +189,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
               </PopoverTrigger>
               <PopoverContent aria-label="Task details" className="text-sm">
                 <p>Added: {formatDate(todo.createdAt)}</p>
+                {todo.agent && <p>Agent: {todo.agent}</p>}
                 {todo.updatedAt !== undefined && <p>Updated: {formatDate(todo.updatedAt)}</p>}
                 {todo.completedAt !== undefined && <p>Completed: {formatDate(todo.completedAt)}</p>}
                 {todo.dueDate !== undefined && <p>Due: {formatDate(todo.dueDate)}</p>}

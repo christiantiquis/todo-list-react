@@ -7,4 +7,5 @@ export type Todo = {
   updatedAt?: number; // Added updatedAt field for last edit timestamp
   completedAt?: number; // Added completedAt field for completion timestamp
   dueDate?: number; // Added dueDate field for task deadlines
+  agent?: string; // Agent that created or claimed this task
 };
