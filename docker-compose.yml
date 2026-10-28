@@ -1,0 +1,9 @@
+name: todolizt
+
+services:
+  web:
+    container_name: todolizt
+    build: .
+    ports:
+      - "7200:80"
+    restart: unless-stopped
