@@ -176,11 +176,56 @@ or newer, as described above.
 `npm start` serves that same server build locally. Sign-in needs this server,
 so the homelab image does not use a static export.
 
+## Agent API
+
+Agents share the signed-in account. They do not read guest tasks stored only in a browser. Create a token on the server, the same way an account is created. The token is printed once. Store it outside the chat, in `TODOLIZT_TOKEN`.
+
+```sh
+docker exec -e EMAIL=you@example.com -e LABEL=agents todolizt node scripts/create-token.mjs
+```
+
+```sh
+export TODOLIZT_URL=http://127.0.0.1:7200
+export TODOLIZT_TOKEN=the-token-printed-once
+export TODOLIZT_AGENT=cursor
+```
+
+`TODOLIZT_URL` is the site origin, with no path. `TODOLIZT_AGENT` is optional. Cursor defaults to `cursor` and Codex defaults to `codex` when it is unset. Send `Authorization: Bearer` with the token. Writes retry when the account document revision changes, so an agent does not send the whole task list.
+
+List open tasks:
+
+```sh
+curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open"
+```
+
+Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name.
+
+```sh
+curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
+  -d '{"text":"Ship the invoice export","list":"billing-app","agent":"cursor"}' \
+  "$TODOLIZT_URL/api/agent/tasks"
+```
+
+Claim, complete, or release that task. The body is `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claiming a task another agent owns returns 409.
+
+```sh
+curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
+  -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/claim"
+curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
+  -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/complete"
+curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
+  -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/release"
+```
+
+`status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
+
+From another repository, say: "Add a TodoLizt task for this project: ship the invoice export." The agent uses the current folder name as `list` and its own name as `agent`.
+
 ## Project structure
 
 ```text
 src/
-  app/                      Page, layout, theme styles, and favicon
+  app/                      Page, layout, theme styles, account API, and agent task API
   components/
     TodoList.tsx            Sidebar workspace and task composer
     TodoItem.tsx            Task editing, completion, and details
