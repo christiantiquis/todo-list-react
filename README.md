@@ -41,14 +41,15 @@ last when sorting by due date. Search applies only to the current view.
 
 ## Where your tasks are saved
 
-TodoLizt uses **local storage in your browser**. No account or backend database is
-required, and task data is not uploaded by the app.
+Without an account, TodoLizt uses **local storage in your browser**. Task data is
+not uploaded.
 
 - Tasks survive page refreshes and application restarts on the same browser profile and origin.
 - Another device, browser profile, or website origin has a separate task collection.
 - People sharing a browser profile and origin share the same stored tasks.
 - Clearing site data removes tasks, Trash, and local recovery copies. Downloaded backups remain separate.
-- There is no account login, cloud sync, background reminder service, or installable offline app at present.
+- Signing in replaces the browser list with that account's tasks. Edits while signed in are saved to the account. Logging out leaves that replaced copy in the browser; the next sign-in replaces it from the account again.
+- There is no public signup, cloud sync between guest browsers, background reminder service, or installable offline app.
 
 Download backups periodically if you rely on TodoLizt for everyday tasks. A copy
 in browser storage alone is not a backup against clearing that browser's data.
@@ -153,40 +154,26 @@ The [deploy workflow](.github/workflows/nextjs.yml) runs on the self-hosted runn
 on homelab1. It starts automatically on pushes to **main**, and it can also be
 started manually from the repository's **Actions** tab.
 
-The job builds a static export inside Docker and serves it with nginx. The
-container publishes host port **7200**. On homelab1 the site is
-`http://127.0.0.1:7200/`.
+The job builds the Next.js server and serves it from Docker. The container
+publishes host port **7200**. On homelab1 the site is `http://127.0.0.1:7200/`.
+Sign-in reads `DATABASE_URL` and `AUTH_SECRET` from `/home/bst/todolizt.env` on
+that machine. See [deploy/env.example](deploy/env.example). Create an account
+only from the server, with no signup page:
+
+```sh
+docker exec -e EMAIL=you@example.com -e PASSWORD='at-least-8' todolizt node scripts/create-user.mjs
+```
 
 Saving files locally does not update the running site. A deployment happens
 only after the changes reach GitHub and the workflow succeeds.
 
-The image build sets `STATIC_EXPORT=true` and leaves `NEXT_PUBLIC_BASE_PATH`
-empty, so assets load from the site root. `scripts/check-pages-export.cjs` runs
-in the image build and stops the deploy if the logo, favicon, or another asset
-reference is missing from `out/`.
+The homelab image leaves `NEXT_PUBLIC_BASE_PATH` empty and runs the Next.js
+server, which is what sign-in needs. It uses Node.js 20 and does not run
+`npm test` or `npm run typecheck`. Local TypeScript tests require Node.js 22.18
+or newer, as described above.
 
-The image uses Node.js 20 and does not run `npm test` or `npm run typecheck`.
-Local TypeScript tests require Node.js 22.18 or newer, as described above.
-
-To reproduce the export locally in PowerShell:
-
-```powershell
-$env:STATIC_EXPORT = 'true'
-$env:NEXT_PUBLIC_BASE_PATH = ''
-npm run build
-node scripts/check-pages-export.cjs
-```
-
-In a POSIX shell:
-
-```sh
-STATIC_EXPORT=true NEXT_PUBLIC_BASE_PATH= npm run build
-node scripts/check-pages-export.cjs
-```
-
-`npm start` is for the normal server build. The homelab container serves the
-static `out/` directory. Unset the two variables and rebuild before returning
-to the normal local server workflow.
+`npm start` serves that same server build locally. Sign-in needs this server,
+so the homelab image does not use a static export.
 
 ## Project structure
 
@@ -206,6 +193,7 @@ public/                     Logo and touch/browser icons
 tests/                     Storage and task behavior tests
 scripts/                    Exported asset path verification
 .github/workflows/          Homelab deployment workflow
+deploy/                     Example server environment file
 ```
 
 ## Built with

@@ -1,4 +1,4 @@
-# Build the static site on the homelab1 self-hosted runner and serve it
+# Build the Next.js server on the homelab1 self-hosted runner and serve it
 # from Docker on host port 7200.
 
 name: Deploy to homelab
@@ -28,4 +28,9 @@ jobs:
         run: docker compose up -d --build
 
       - name: Check the site responds
-        run: curl -fsS -o /dev/null http://127.0.0.1:7200/
+        run: |
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            curl -fsS -o /dev/null http://127.0.0.1:7200/ && exit 0
+            sleep 2
+          done
+          exit 1

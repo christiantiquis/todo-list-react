@@ -5,5 +5,10 @@ services:
     container_name: todolizt
     build: .
     ports:
-      - "7200:80"
+      - "7200:3000"
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    env_file:
+      - /home/bst/todolizt.env
     restart: unless-stopped

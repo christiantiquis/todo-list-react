@@ -7,14 +7,26 @@ RUN npm ci --legacy-peer-deps
 
 COPY . .
 
-ENV STATIC_EXPORT=true
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_BASE_PATH=
 
-RUN npx next build && node scripts/check-pages-export.cjs
+RUN npx next build
 
-FROM nginx:1.27-alpine
+FROM node:20-bookworm-slim
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/out /usr/share/nginx/html
+WORKDIR /app
 
-EXPOSE 80
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
+COPY --from=build /app/public ./public
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/src/lib/password.mjs ./src/lib/password.mjs
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]

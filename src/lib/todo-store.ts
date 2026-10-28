@@ -74,6 +74,12 @@ export function saveTodoData(storage: Storage, data: TodoData, revision = 0, exp
 export function pruneTrash(data: TodoData, now = Date.now()): TodoData {
   return { ...data, trash: data.trash.filter(entry => entry.deletedAt > now - TRASH_RETENTION_MS) };
 }
+export function parseTodoData(value: unknown): TodoData {
+  return dataSchema.parse(value);
+}
+export function nextTodoData(current: TodoData, change: (current: TodoData) => TodoData, now = Date.now()): TodoData {
+  return pruneTrash(dataSchema.parse(change(pruneTrash(current, now))), now);
+}
 
 // Every write re-reads shared storage inside the same cross-tab lock.
 export async function commitTodoChange(
