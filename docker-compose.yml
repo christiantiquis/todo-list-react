@@ -9,6 +9,6 @@ services:
     environment:
       HOSTNAME: 0.0.0.0
       PORT: "3000"
-    env_file:
-      - /home/bst/todolizt.env
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
     restart: unless-stopped

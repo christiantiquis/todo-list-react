@@ -25,7 +25,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build and start on port 7200
-        run: docker compose up -d --build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$AUTH_SECRET" ]; then
+            echo "Set repository secrets DATABASE_URL and AUTH_SECRET."
+            exit 1
+          fi
+          docker compose up -d --build
 
       - name: Check the site responds
         run: |

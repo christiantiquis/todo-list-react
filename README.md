@@ -156,8 +156,9 @@ started manually from the repository's **Actions** tab.
 
 The job builds the Next.js server and serves it from Docker. The container
 publishes host port **7200**. On homelab1 the site is `http://127.0.0.1:7200/`.
-Sign-in reads `DATABASE_URL` and `AUTH_SECRET` from `/home/bst/todolizt.env` on
-that machine. See [deploy/env.example](deploy/env.example). Create an account
+Sign-in uses the repository Actions secrets `DATABASE_URL` and `AUTH_SECRET`.
+The deploy passes them into the container. [deploy/env.example](deploy/env.example)
+shows the shape of `DATABASE_URL`. Create an account
 only from the server, with no signup page:
 
 ```sh
