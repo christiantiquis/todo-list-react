@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, HardDrive, Upload } from "lucide-react";
+import { Archive, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import type { TodoStore } from "@/hooks/use-todos";
 import { MAX_BACKUP_BYTES, mergeBackup, parseBackup, type TodoData } from "@/lib/todo-store";
@@ -56,7 +56,7 @@ export function BackupDialog({ store }: { store: TodoStore }) {
   return <Dialog onOpenChange={() => {
     request.current++; setIncoming(null); setFilename(""); setError(""); setReading(false);
   }}>
-    <DialogTrigger asChild><Button disabled={!store.loaded} variant="ghost" className="w-full justify-start gap-3 text-sm text-muted-foreground"><HardDrive className="h-4 w-4" />Data & backup</Button></DialogTrigger>
+    <DialogTrigger asChild><Button disabled={!store.loaded} variant="ghost" className="h-10 w-full justify-start gap-2.5 rounded-none px-3 text-sm text-muted-foreground"><Archive className="h-4 w-4" />Data & backup</Button></DialogTrigger>
     <DialogContent className="max-h-[85dvh] max-w-[calc(100%-2rem)] overflow-y-auto sm:max-w-lg">
       <DialogHeader><DialogTitle>Data & backup</DialogTitle><DialogDescription>Download a copy of your tasks, lists, and Trash. Keep it somewhere safe so you can restore it later.</DialogDescription></DialogHeader>
       <section className="space-y-3 rounded-xl border p-4" aria-label="Export backup">

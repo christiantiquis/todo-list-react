@@ -129,8 +129,12 @@ export function TodoList() {
           </Dialog>
         </div>
         <nav className="max-h-72 space-y-1 overflow-y-auto px-3 pb-4 lg:max-h-none lg:flex-1" aria-label="Lists">{store.categories.map((name, index) => <button key={name} aria-current={view === categoryValue(name) ? "page" : undefined} onClick={() => navigate(categoryValue(name))} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-accent", view === categoryValue(name) ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground")}><span className={cn("h-2 w-2 shrink-0 rounded-full", ["bg-sky-400", "bg-amber-400", "bg-violet-400", "bg-emerald-400"][index % 4])} /><span className="min-w-0 truncate">{name}</span><span className="ml-auto text-xs tabular-nums">{store.todos.filter(todo => todo.category === name && !todo.completed).length}</span></button>)}</nav>
-        <div className="px-3 pt-2"><AccountPanel store={store} /><BackupDialog store={store} /></div>
-        <div className="m-4 rounded-xl border bg-background/60 p-4"><p className="mb-1 text-xs font-medium">A little more room to think.</p><p className="text-xs leading-relaxed text-muted-foreground">{store.accountEmail ? "Your tasks are saved to your account." : "Your tasks stay saved in this browser."}</p></div>
+        <div className="mt-auto px-3 pb-4 pt-2">
+          <div className="overflow-hidden rounded-xl border bg-card/80">
+            <AccountPanel store={store} />
+            <div className="border-t"><BackupDialog store={store} /></div>
+          </div>
+        </div>
       </aside>
 
       <main className="min-w-0">
