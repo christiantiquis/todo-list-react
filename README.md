@@ -16,9 +16,9 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 ## Features
 
 - **Daily focus:** My Day brings together tasks due today and overdue tasks.
-- **Task management:** Add, edit, complete, and delete tasks with optional lists and due dates.
+- **Task management:** Add, edit, complete, and delete tasks with optional lists, due dates, and priorities.
 - **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, and your lists.
-- **Search and sorting:** Search within the current view; sort by deadline, newest first, or alphabetically.
+- **Search and sorting:** Search within the current view; sort by deadline, priority, newest first, or alphabetically.
 - **Custom lists:** Create your own lists alongside Work, Personal, and Shopping.
 - **Recoverable deletion:** Restore individual tasks or matching groups from Trash for 30 days, with a quick Undo after deletion.
 - **Portable backups:** Export JSON backups and preview validated imports before merging them.
@@ -28,7 +28,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 ## How to use it
 
 1. Open **My Day** and type a task into the task composer. Press Enter or select **Add**.
-2. Expand **List & due date** to choose a list, change the deadline, or clear it.
+2. Expand **List, date & priority** to choose a list, change the deadline, or mark a task high, medium, or low.
 3. Check a task to complete it, or use its edit and details buttons.
 4. Select the **+** beside **Your lists** to create or manage custom lists.
 5. Open **Data & backup** near the bottom of the sidebar to download or import a backup.
@@ -37,7 +37,7 @@ New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;
 **All Tasks** is where you can find everything. Upcoming shows active tasks due
 after today. Deadlines use your browser's local calendar, and undated tasks sort
-last when sorting by due date. Search applies only to the current view.
+last when sorting by due date. Sorting by priority puts high first and leaves tasks with no priority last. Search applies only to the current view.
 
 ## Where your tasks are saved
 
@@ -198,7 +198,7 @@ List open tasks:
 curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open"
 ```
 
-Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name.
+Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name. `priority` is optional: `high`, `medium`, or `low`.
 
 ```sh
 curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \

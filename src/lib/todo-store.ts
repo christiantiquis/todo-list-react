@@ -2,6 +2,12 @@ import { z } from "zod";
 import type { Todo } from "../types/todo";
 
 export const predefinedCategories = ["Work", "Personal", "Shopping"];
+export const taskPriorities = ["high", "medium", "low"] as const;
+export type TaskPriority = (typeof taskPriorities)[number];
+const priorityRank: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
+export function priorityLabel(priority?: string) {
+  return priority === "high" ? "High" : priority === "medium" ? "Medium" : priority === "low" ? "Low" : "";
+}
 export const categoryValue = (name: string) => `category:${name}`;
 export const decodeCategory = (value: string) => value.startsWith("category:") ? value.slice(9) : undefined;
 export const DATA_KEY = "todo-data-v1";
@@ -13,6 +19,7 @@ const todoSchema = z.object({
   category: z.string().trim().min(1).optional(), createdAt: timestamp,
   updatedAt: timestamp.optional(), completedAt: timestamp.optional(), dueDate: timestamp.optional(),
   agent: z.string().trim().min(1).max(64).optional(),
+  priority: z.enum(taskPriorities).optional(),
 });
 const todosSchema = z.array(todoSchema).refine(items => new Set(items.map(item => item.id)).size === items.length);
 const categoriesSchema = z.array(z.string().trim().min(1)).transform(items =>
@@ -189,6 +196,13 @@ function dueStamp(value?: number) {
   if (!Number.isFinite(value) || Number.isNaN(new Date(value).getTime())) throw new AgentTaskError("Due date is not valid.", 400);
   return value;
 }
+export function taskPriority(value?: string | null): TaskPriority | undefined {
+  const priority = value?.trim().toLowerCase() ?? "";
+  if (!priority || priority === "none") return undefined;
+  const parsed = z.enum(taskPriorities).safeParse(priority);
+  if (!parsed.success) throw new AgentTaskError("Priority must be high, medium, or low.", 400);
+  return parsed.data;
+}
 export function agentDueDate(value: unknown) {
   if (value === undefined || value === null || value === "") return undefined;
   if (typeof value === "number") return dueStamp(value);
@@ -197,7 +211,7 @@ export function agentDueDate(value: unknown) {
 }
 export function addAgentTask(
   data: TodoData,
-  input: { text: string; list?: string; dueDate?: number; agent?: string },
+  input: { text: string; list?: string; dueDate?: number; agent?: string; priority?: string },
   now = Date.now(),
   id = crypto.randomUUID(),
 ) {
@@ -206,11 +220,13 @@ export function addAgentTask(
   const listed = listedTask(data, input.list);
   const owner = input.agent === undefined || input.agent.trim() === "" ? undefined : agentName(input.agent);
   const dueDate = dueStamp(input.dueDate);
+  const priority = taskPriority(input.priority);
   const task: Todo = {
     id, text, completed: false, createdAt: now,
     ...(listed.category ? { category: listed.category } : {}),
     ...(dueDate !== undefined ? { dueDate } : {}),
     ...(owner ? { agent: owner } : {}),
+    ...(priority ? { priority } : {}),
   };
   return { data: { ...listed.data, todos: [...listed.data.todos, task] }, task };
 }
@@ -253,9 +269,18 @@ export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all",
     (status === "all" || (status === "done" ? todo.completed : !todo.completed)) &&
     (!agent || todo.agent === agent));
 }
-export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number): Todo[] {
+export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number, priority?: string): Todo[] {
   if (!text.trim()) throw new Error("Task text cannot be empty.");
-  return todos.map(todo => todo.id === id ? { ...todo, text: text.trim(), category, dueDate, updatedAt: Date.now() } : todo);
+  let nextPriority: TaskPriority | undefined;
+  try { nextPriority = taskPriority(priority); }
+  catch (error) { throw new Error(error instanceof Error ? error.message : "Priority must be high, medium, or low."); }
+  return todos.map(todo => {
+    if (todo.id !== id) return todo;
+    const next: Todo = { ...todo, text: text.trim(), category, dueDate, updatedAt: Date.now() };
+    if (nextPriority) next.priority = nextPriority;
+    else delete next.priority;
+    return next;
+  });
 }
 export function deleteCategory(data: TodoData, category: string): TodoData {
   if (predefinedCategories.includes(category)) return data;
@@ -283,6 +308,7 @@ export function selectTodos(todos: Todo[], search: string, category: string, sta
     (due === "all" || deadline(todo, now) === due))
     .sort((a, b) => sort === "alphabetical" ? a.text.localeCompare(b.text) :
       sort === "completed-last" ? Number(a.completed) - Number(b.completed) || b.createdAt - a.createdAt :
+      sort === "priority" ? (a.priority ? priorityRank[a.priority] : 3) - (b.priority ? priorityRank[b.priority] : 3) || (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || b.createdAt - a.createdAt :
       sort === "due-date" ? (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || b.createdAt - a.createdAt : b.createdAt - a.createdAt);
 }
 

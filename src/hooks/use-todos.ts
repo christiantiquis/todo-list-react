@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   assertTaskUnchanged, commitTodoChange, createBackup, DATA_KEY, deleteCategory,
-  editTodo, emptyTodoData, loadTodoData, mergeBackup, nextTodoData, parseTodoData, predefinedCategories,
+  editTodo, emptyTodoData, loadTodoData, mergeBackup, nextTodoData, parseTodoData, predefinedCategories, taskPriority,
   pruneTrash, restoreTrash, saveTodoData, trashTodos, TodoConflictError, type TodoData,
 } from "@/lib/todo-store";
 import type { Todo } from "@/types/todo";
@@ -274,11 +274,14 @@ export function useTodos() {
         setStorageMessage("Saved data could not be read. Reload to retry.");
       }
     },
-    async add(text: string, category?: string, dueDate?: number) {
+    async add(text: string, category?: string, dueDate?: number, priority?: string) {
       if (!text.trim()) return false;
-      const todo: Todo = { id: crypto.randomUUID(), text: text.trim(), category, dueDate, completed: false, createdAt: Date.now() };
+      const id = crypto.randomUUID();
+      const createdAt = Date.now();
       return !(await mutate(current => {
         validCategory(current, category);
+        const rank = taskPriority(priority);
+        const todo: Todo = { id, text: text.trim(), category, dueDate, completed: false, createdAt, ...(rank ? { priority: rank } : {}) };
         return { ...current, todos: [...current.todos, todo] };
       }));
     },
@@ -292,11 +295,11 @@ export function useTodos() {
         } : todo) };
       });
     },
-    async edit(id: string, text: string, category: string | undefined, dueDate: number | undefined, expected: Todo) {
+    async edit(id: string, text: string, category: string | undefined, dueDate: number | undefined, priority: string, expected: Todo) {
       return !(await mutate(current => {
         assertTaskUnchanged(current, expected);
         validCategory(current, category);
-        return { ...current, todos: editTodo(current.todos, id, text, category, dueDate) };
+        return { ...current, todos: editTodo(current.todos, id, text, category, dueDate, priority) };
       }));
     },
     remove(id: string) { return remove([id]); },
