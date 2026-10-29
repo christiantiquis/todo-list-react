@@ -44,15 +44,29 @@ test('editing trims text, clears optional fields, and leaves other tasks untouch
   assert.equal(result[0].category, undefined);
   assert.equal(result[0].dueDate, undefined);
   assert.equal(result[0].agent, 'cursor');
+  assert.equal(result[0].priority, undefined);
   assert.equal(result[0].note, undefined);
   assert.equal(result[1], other);
-  const noted = editTodo(result, 'one', 'Updated', 'Work', 123, '  Call before noon.  ');
+  const ranked = editTodo(result, 'one', 'Updated', 'Work', 123, ' HIGH ');
+  assert.equal(ranked[0].priority, 'high');
+  assert.equal(ranked[0].note, undefined);
+  assert.equal(ranked[0].category, 'Work');
+  const noted = editTodo(ranked, 'one', 'Updated', 'Work', 123, 'high', '  Call before noon.  ');
   assert.equal(noted[0].note, 'Call before noon.');
-  assert.equal(noted[0].category, 'Work');
-  const cleared = editTodo(noted, 'one', 'Updated', 'Work', 123, '   ');
+  assert.equal(noted[0].priority, 'high');
+  const cleared = editTodo(noted, 'one', 'Updated', 'Work', 123, 'none', '   ');
+  assert.equal(cleared[0].priority, undefined);
   assert.equal(cleared[0].note, undefined);
   assert.throws(() => editTodo(result, 'one', '  '), /empty/);
-  assert.throws(() => editTodo(result, 'one', 'Updated', undefined, undefined, 'x'.repeat(2001)), /2,000/);
+  assert.throws(() => editTodo(result, 'one', 'Updated', undefined, undefined, 'urgent'), /high, medium, or low/);
+  assert.throws(() => editTodo(result, 'one', 'Updated', undefined, undefined, undefined, 'x'.repeat(2001)), /2,000/);
+  const ordered = selectTodos([
+    task({ id: 'low', priority: 'low', createdAt: 3 }),
+    task({ id: 'none', createdAt: 4 }),
+    task({ id: 'high', priority: 'high', createdAt: 1 }),
+    task({ id: 'medium', priority: 'medium', createdAt: 2 }),
+  ], '', 'all', 'All', 'all', 'priority', new Date()).map(todo => todo.id);
+  assert.deepEqual(ordered, ['high', 'medium', 'low', 'none']);
   assert.deepEqual(selectTodos([task({ id: 'noted', note: 'Bring the invoice' }), task({ id: 'other' })], 'invoice', 'all', 'All', 'all', 'default', new Date()).map(todo => todo.id), ['noted']);
 });
 test('category deletion removes assignments but protects built-in categories', () => {
@@ -316,7 +330,9 @@ test('agent tasks keep their owner through save, reload, and backup', () => {
   const created = addAgentTask(emptyTodoData(), { text: '  Ship export  ', list: 'billing-app', agent: ' cursor ' }, now, 'task-1');
   assert.equal(created.task.text, 'Ship export');
   assert.equal(created.task.agent, 'cursor');
-  assert.equal(addAgentTask(emptyTodoData(), { text: 'Noted', note: '  Bring the file.  ' }, now, 'task-2').task.note, 'Bring the file.');
+  assert.equal(addAgentTask(emptyTodoData(), { text: 'Urgent', priority: ' HIGH ' }, now, 'task-2').task.priority, 'high');
+  assert.throws(() => addAgentTask(emptyTodoData(), { text: 'Urgent', priority: 'urgent' }), (error) => error.status === 400);
+  assert.equal(addAgentTask(emptyTodoData(), { text: 'Noted', note: '  Bring the file.  ' }, now, 'task-3').task.note, 'Bring the file.');
   assert.throws(() => addAgentTask(emptyTodoData(), { text: 'Noted', note: 'x'.repeat(2001) }), (error) => error.status === 400);
   assert.equal(created.task.category, 'billing-app');
   assert.deepEqual(created.data.customCategories, ['billing-app']);
