@@ -48,7 +48,7 @@ not uploaded.
 - Another device, browser profile, or website origin has a separate task collection.
 - People sharing a browser profile and origin share the same stored tasks.
 - Clearing site data removes tasks, Trash, and local recovery copies. Downloaded backups remain separate.
-- Signing in replaces the browser list with that account's tasks. Edits while signed in are saved to the account. Logging out leaves that replaced copy in the browser; the next sign-in replaces it from the account again.
+- Signing in adds browser tasks that are not already on the account, then keeps later edits on the account. Tasks already on the account are left as they are. Logging out leaves that account copy in the browser.
 - There is no public signup, cloud sync between guest browsers, background reminder service, or installable offline app.
 
 Download backups periodically if you rely on TodoLizt for everyday tasks. A copy
