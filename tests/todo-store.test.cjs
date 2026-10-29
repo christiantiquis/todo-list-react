@@ -309,4 +309,8 @@ test('agent task queries can select open, done, and one owner', () => {
   assert.deepEqual(selectAgentTasks([open, done, other], 'open', 'cursor').map(todo => todo.id), ['one', 'three']);
   assert.deepEqual(selectAgentTasks([open, done, other], 'done').map(todo => todo.id), ['two']);
   assert.equal(selectAgentTasks([open, done, other], 'all').length, 3);
+  const billing = task({ id: 'bill', category: 'Billing-App', agent: 'cursor' });
+  const wallet = task({ id: 'wallet', category: 'ctwallet', agent: 'cursor' });
+  assert.deepEqual(selectAgentTasks([billing, wallet, open], 'open', 'cursor', ' billing-app ').map(todo => todo.id), ['bill']);
+  assert.deepEqual(selectAgentTasks([billing, wallet], 'all', undefined, 'missing').map(todo => todo.id), []);
 });

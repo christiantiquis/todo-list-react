@@ -248,10 +248,12 @@ export function deleteAgentTask(data: TodoData, id: string, agent: string, now =
 export function findAgentTask(data: TodoData, id: string) {
   return data.todos.find(todo => todo.id === id) ?? data.trash.find(entry => entry.todo.id === id)?.todo;
 }
-export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string) {
+export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string, list?: string) {
+  const project = list?.trim().toLowerCase();
   return todos.filter(todo =>
     (status === "all" || (status === "done" ? todo.completed : !todo.completed)) &&
-    (!agent || todo.agent === agent));
+    (!agent || todo.agent === agent) &&
+    (!project || todo.category?.toLowerCase() === project));
 }
 export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number): Todo[] {
   if (!text.trim()) throw new Error("Task text cannot be empty.");

@@ -192,10 +192,10 @@ export TODOLIZT_AGENT=cursor
 
 `TODOLIZT_URL` is the site origin, with no path. `TODOLIZT_AGENT` is optional. Cursor defaults to `cursor` and Codex defaults to `codex` when it is unset. Send `Authorization: Bearer` with the token. Writes retry when the account document revision changes, so an agent does not send the whole task list.
 
-List open tasks:
+List open tasks for one project. `list` is the project name and matches without regard to case. Leave it off to read every list.
 
 ```sh
-curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open"
+curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open&agent=cursor&list=billing-app"
 ```
 
 Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name.
@@ -219,7 +219,7 @@ curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: ap
   -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/delete"
 ```
 
-`status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
+`status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner and `&list=billing-app` to keep one project. A blank list name is rejected. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
 
 From another repository, say: "Add a TodoLizt task for this project: ship the invoice export." The agent uses the current folder name as `list` and its own name as `agent`.
 
