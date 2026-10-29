@@ -245,6 +245,44 @@ export function deleteAgentTask(data: TodoData, id: string, agent: string, now =
   const task: Todo = { ...todo, agent: name, updatedAt: now };
   return { data: trashTodos(replaceTask(data, task), [id], now), task };
 }
+export function updateAgentTask(
+  data: TodoData,
+  id: string,
+  input: { agent: string; text?: string; list?: string | null; dueDate?: number | null },
+  now = Date.now(),
+) {
+  const name = agentName(input.agent);
+  const todo = activeTask(data, id);
+  if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
+  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
+  if (!("text" in input) && !("list" in input) && !("dueDate" in input)) {
+    throw new AgentTaskError("Choose text, a list, or a due date to update.", 400);
+  }
+  let text = todo.text;
+  if ("text" in input) {
+    text = input.text?.trim() ?? "";
+    if (!text) throw new AgentTaskError("Task text cannot be empty.", 400);
+  }
+  let nextData = data;
+  let category = todo.category;
+  if ("list" in input) {
+    const raw = input.list ?? "";
+    if (raw.trim() === "") category = undefined;
+    else {
+      const listed = listedTask(data, raw);
+      nextData = listed.data;
+      category = listed.category;
+    }
+  }
+  let dueDate = todo.dueDate;
+  if ("dueDate" in input) dueDate = input.dueDate === null ? undefined : dueStamp(input.dueDate);
+  const task: Todo = { ...todo, text, agent: name, updatedAt: now };
+  if (category) task.category = category;
+  else delete task.category;
+  if (dueDate !== undefined) task.dueDate = dueDate;
+  else delete task.dueDate;
+  return { data: replaceTask(nextData, task), task };
+}
 export function findAgentTask(data: TodoData, id: string) {
   return data.todos.find(todo => todo.id === id) ?? data.trash.find(entry => entry.todo.id === id)?.todo;
 }
