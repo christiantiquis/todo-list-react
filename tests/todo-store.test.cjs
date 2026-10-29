@@ -397,3 +397,35 @@ test('agent task queries can select open, done, and one owner', () => {
   assert.deepEqual(selectAgentTasks([billing, wallet, open], 'open', 'cursor', ' billing-app ').map(todo => todo.id), ['bill']);
   assert.deepEqual(selectAgentTasks([billing, wallet], 'all', undefined, 'missing').map(todo => todo.id), []);
 });
+
+test('pending tasks persist through storage, backup and Trash and stay out of daily views', () => {
+  const held = task({ pending: true, dueDate: now, agent: 'cursor', category: 'Work' });
+  const saved = storage();
+  saveTodoData(saved, dataWith([held]));
+  assert.deepEqual(loadTodoData(saved).data.todos, [held]);
+  assert.deepEqual(parseBackup(createBackup(dataWith([held]), now), now).todos, [held]);
+  assert.deepEqual(restoreTrash(trashTodos(dataWith([held]), ['one'], now), ['one'], now).todos, [held]);
+  assert.equal(deadline(held, new Date(now)), 'none');
+  for (const view of ['day', 'upcoming', 'completed']) assert.equal(workspaceTodos([held], view, '', 'default', new Date(now)).length, 0);
+  for (const view of ['pending', 'all']) assert.deepEqual(workspaceTodos([held], view, '', 'default', new Date(now)), [held]);
+  assert.equal(workspaceView('pending'), 'pending');
+  assert.deepEqual(selectAgentTasks([held], 'pending'), [held]);
+  assert.deepEqual(selectAgentTasks([held], 'open'), []);
+  assert.deepEqual(selectAgentTasks([held], 'done'), []);
+});
+
+test('agents can hold and resume tasks they own and complete held tasks', () => {
+  const created = addAgentTask(emptyTodoData(), { text: 'Waiting', agent: 'cursor' }, now, 'held');
+  const held = updateAgentTask(created.data, 'held', { agent: 'cursor', status: 'pending' }, now + 1);
+  assert.equal(held.task.pending, true);
+  assert.equal(held.task.updatedAt, now + 1);
+  assert.throws(() => updateAgentTask(held.data, 'held', { agent: 'codex', status: 'open' }), error => error.status === 409);
+  assert.throws(() => updateAgentTask(held.data, 'held', { agent: 'cursor', status: 'invalid' }), error => error.status === 400);
+  const resumed = updateAgentTask(held.data, 'held', { agent: 'cursor', status: 'open' });
+  assert.equal(resumed.task.pending, false);
+  assert.deepEqual(selectAgentTasks(resumed.data.todos, 'open'), [resumed.task]);
+  const done = completeAgentTask(held.data, 'held', 'cursor', now + 2);
+  assert.equal(done.task.pending, false);
+  assert.equal(done.task.completed, true);
+  assert.deepEqual(selectAgentTasks(done.data.todos, 'pending'), []);
+});

@@ -16,6 +16,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 ## Features
 
 - **Daily focus:** My Day brings together tasks due today and overdue tasks.
+- **Pending tasks:** Put a task on hold with its pause button and resume it with play. Pending tasks have their own view and stay out of My Day and Upcoming. They remain in All Tasks, their lists, backups, and search. Completing a pending task clears the hold.
 - **Task management:** Add, edit, complete, and delete tasks with optional lists, due dates, and notes.
 - **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, Settings, and your lists.
 - **Search and sorting:** Search task text and notes within the current view; sort by deadline, newest first, or alphabetically.
@@ -224,7 +225,7 @@ curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: ap
   "$TODOLIZT_URL/api/agent/tasks/$ID/update"
 ```
 
-`status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner and `&list=billing-app` to keep one project. A blank list name is rejected. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
+`status` is `open` (the default), `pending`, `done`, or `all`. Open excludes tasks on hold. Update a task with `"status": "pending"` to put it on hold or `"status": "open"` to resume it. Add `&agent=cursor` to keep one owner and `&list=billing-app` to keep one project. A blank list name is rejected. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
 
 From another repository, say: "Add a TodoLizt task for this project: ship the invoice export." The agent uses the current folder name as `list` and its own name as `agent`.
 

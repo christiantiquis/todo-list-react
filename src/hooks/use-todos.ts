@@ -292,13 +292,21 @@ export function useTodos() {
         return { ...current, todos: [...current.todos, todo] };
       }));
     },
+    async setPending(id: string, pending: boolean) {
+      const expected = dataRef.current.todos.find(todo => todo.id === id);
+      if (!expected || expected.completed) return;
+      await mutate(current => {
+        assertTaskUnchanged(current, expected);
+        return { ...current, todos: current.todos.map(todo => todo.id === id ? { ...todo, pending, updatedAt: Date.now() } : todo) };
+      });
+    },
     async toggle(id: string) {
       const expected = dataRef.current.todos.find(todo => todo.id === id);
       if (!expected) return;
       await mutate(current => {
         assertTaskUnchanged(current, expected);
         return { ...current, todos: current.todos.map(todo => todo.id === id ? {
-          ...todo, completed: !todo.completed, updatedAt: Date.now(), completedAt: !todo.completed ? Date.now() : undefined,
+          ...todo, completed: !todo.completed, pending: false, updatedAt: Date.now(), completedAt: !todo.completed ? Date.now() : undefined,
         } : todo) };
       });
     },

@@ -9,7 +9,7 @@ export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
 const timestamp = z.number().finite().refine(value => !Number.isNaN(new Date(value).getTime()));
 const todoSchema = z.object({
-  id: z.string().min(1), text: z.string().trim().min(1), completed: z.boolean(),
+  id: z.string().min(1), text: z.string().trim().min(1), completed: z.boolean(), pending: z.boolean().optional(),
   category: z.string().trim().min(1).optional(), createdAt: timestamp,
   updatedAt: timestamp.optional(), completedAt: timestamp.optional(), dueDate: timestamp.optional(),
   agent: z.string().trim().min(1).max(64).optional(),
@@ -243,7 +243,7 @@ export function completeAgentTask(data: TodoData, id: string, agent: string, now
   const name = agentName(agent);
   const todo = activeTask(data, id);
   if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
-  const task: Todo = { ...todo, agent: todo.agent ?? name, finishedBy: name, completed: true, completedAt: now, updatedAt: now };
+  const task: Todo = { ...todo, agent: todo.agent ?? name, finishedBy: name, completed: true, pending: false, completedAt: now, updatedAt: now };
   return { data: replaceTask(data, task), task };
 }
 export function releaseAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
@@ -263,16 +263,17 @@ export function deleteAgentTask(data: TodoData, id: string, agent: string, now =
 export function updateAgentTask(
   data: TodoData,
   id: string,
-  input: { agent: string; text?: string; list?: string | null; dueDate?: number | null },
+  input: { agent: string; text?: string; list?: string | null; dueDate?: number | null; status?: "open" | "pending" },
   now = Date.now(),
 ) {
   const name = agentName(input.agent);
   const todo = activeTask(data, id);
   if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
   if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
-  if (!("text" in input) && !("list" in input) && !("dueDate" in input)) {
-    throw new AgentTaskError("Choose text, a list, or a due date to update.", 400);
+  if (!("text" in input) && !("list" in input) && !("dueDate" in input) && !("status" in input)) {
+    throw new AgentTaskError("Choose text, a list, a due date, or a status to update.", 400);
   }
+  if (input.status !== undefined && input.status !== "open" && input.status !== "pending") throw new AgentTaskError("Status must be open or pending.", 400);
   let text = todo.text;
   if ("text" in input) {
     text = input.text?.trim() ?? "";
@@ -292,6 +293,7 @@ export function updateAgentTask(
   let dueDate = todo.dueDate;
   if ("dueDate" in input) dueDate = input.dueDate === null ? undefined : dueStamp(input.dueDate);
   const task: Todo = { ...todo, text, agent: name, updatedAt: now };
+  if (input.status !== undefined) task.pending = input.status === "pending";
   if (category) task.category = category;
   else delete task.category;
   if (dueDate !== undefined) task.dueDate = dueDate;
@@ -301,10 +303,10 @@ export function updateAgentTask(
 export function findAgentTask(data: TodoData, id: string) {
   return data.todos.find(todo => todo.id === id) ?? data.trash.find(entry => entry.todo.id === id)?.todo;
 }
-export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string, list?: string) {
+export function selectAgentTasks(todos: Todo[], status: "open" | "pending" | "done" | "all", agent?: string, list?: string) {
   const project = list?.trim().toLowerCase();
   return todos.filter(todo =>
-    (status === "all" || (status === "done" ? todo.completed : !todo.completed)) &&
+    (status === "all" || (status === "done" ? todo.completed : status === "pending" ? !todo.completed && todo.pending : !todo.completed && !todo.pending)) &&
     (!agent || todo.agent === agent) &&
     (!project || todo.category?.toLowerCase() === project));
 }
@@ -335,7 +337,7 @@ export function restoreTodos(current: Todo[], removed: Todo[], categories: strin
   }))];
 }
 export function deadline(todo: Todo, now: Date) {
-  if (todo.completed || todo.dueDate === undefined) return "none";
+  if (todo.completed || todo.pending || todo.dueDate === undefined) return "none";
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   return todo.dueDate < today ? "overdue" : todo.dueDate < tomorrow ? "today" : "upcoming";
@@ -357,7 +359,7 @@ export function matchesWorkspaceAgent(agent: string | undefined, owner = "all") 
   if (owner.startsWith("agent:")) return agent === owner.slice(6);
   return agent === owner;
 }
-const builtinViews = new Set(["day", "all", "upcoming", "trash", "completed", "settings"]);
+const builtinViews = new Set(["day", "all", "upcoming", "trash", "completed", "pending", "settings"]);
 export function workspaceView(value: string | null | undefined) {
   const list = value ? decodeCategory(value) : undefined;
   if (value && (builtinViews.has(value) || (list && value === categoryValue(list)))) return value;
@@ -370,6 +372,7 @@ export function workspaceTodos(todos: Todo[], view: string, search: string, sort
     if (view === "day") return ["today", "overdue"].includes(deadline(todo, now));
     if (view === "upcoming") return deadline(todo, now) === "upcoming";
     if (view === "completed") return todo.completed;
+    if (view === "pending") return !todo.completed && !!todo.pending;
     if (view.startsWith("category:")) return todo.category === decodeCategory(view);
     return true;
   });
