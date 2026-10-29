@@ -82,7 +82,7 @@ test('undo preserves intervening tasks without duplicates or deleted categories'
   assert.equal(restored[1].category, undefined);
   assert.equal(restoreTodos(restored, removed, ['Work']).length, 2);
 });
-const { workspaceTodos } = require('../src/lib/todo-store.ts');
+const { workspaceTodos, workspaceView } = require('../src/lib/todo-store.ts');
 test('workspace views separate daily, upcoming, completed, and list tasks', () => {
   const now = new Date(2026, 9, 27, 12);
   const tasks = [
@@ -99,6 +99,11 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
   assert.deepEqual(ids(categoryValue('Work')), ['old', 'done']);
   assert.equal(ids('all').length, 5);
   assert.equal(workspaceTodos(tasks, 'day', 'missing', 'default', now).length, 0);
+  assert.equal(workspaceView(null), 'day');
+  assert.equal(workspaceView('completed'), 'completed');
+  assert.equal(workspaceView(categoryValue('Weekend projects')), 'category:Weekend projects');
+  assert.equal(workspaceView('missing'), 'day');
+  assert.equal(workspaceView('category:'), 'day');
 });
 const {
   DATA_KEY, TRASH_RETENTION_MS, MAX_BACKUP_BYTES, emptyTodoData, trashTodos,
