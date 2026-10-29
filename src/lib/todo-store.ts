@@ -286,9 +286,16 @@ export function selectTodos(todos: Todo[], search: string, category: string, sta
       sort === "due-date" ? (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || b.createdAt - a.createdAt : b.createdAt - a.createdAt);
 }
 
-export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date) {
+export function matchesWorkspaceAgent(agent: string | undefined, owner = "all") {
+  if (!owner || owner === "all") return true;
+  if (owner === "unclaimed") return !agent;
+  if (owner.startsWith("agent:")) return agent === owner.slice(6);
+  return agent === owner;
+}
+export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date, owner = "all") {
   if (view === "settings") return [];
   const tasks = todos.filter(todo => {
+    if (!matchesWorkspaceAgent(todo.agent, owner)) return false;
     if (view === "day") return ["today", "overdue"].includes(deadline(todo, now));
     if (view === "upcoming") return deadline(todo, now) === "upcoming";
     if (view === "completed") return todo.completed;

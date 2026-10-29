@@ -82,7 +82,7 @@ test('undo preserves intervening tasks without duplicates or deleted categories'
   assert.equal(restored[1].category, undefined);
   assert.equal(restoreTodos(restored, removed, ['Work']).length, 2);
 });
-const { workspaceTodos } = require('../src/lib/todo-store.ts');
+const { workspaceTodos, matchesWorkspaceAgent } = require('../src/lib/todo-store.ts');
 test('workspace views separate daily, upcoming, completed, and list tasks', () => {
   const now = new Date(2026, 9, 27, 12);
   const tasks = [
@@ -100,6 +100,18 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
   assert.equal(ids('all').length, 5);
   assert.deepEqual(ids('settings'), []);
   assert.equal(workspaceTodos(tasks, 'day', 'missing', 'default', now).length, 0);
+  const owned = [
+    task({ id: 'mine', agent: 'cursor', dueDate: new Date(2026, 9, 27).getTime() }),
+    task({ id: 'theirs', agent: 'codex', dueDate: new Date(2026, 9, 27).getTime() }),
+    task({ id: 'free', dueDate: new Date(2026, 9, 27).getTime() }),
+    task({ id: 'named-all', agent: 'all', dueDate: new Date(2026, 9, 27).getTime() }),
+  ];
+  assert.deepEqual(workspaceTodos(owned, 'day', '', 'due-date', now, 'agent:cursor').map(todo => todo.id), ['mine']);
+  assert.deepEqual(workspaceTodos(owned, 'day', '', 'due-date', now, 'unclaimed').map(todo => todo.id), ['free']);
+  assert.deepEqual(workspaceTodos(owned, 'day', '', 'due-date', now, 'agent:all').map(todo => todo.id), ['named-all']);
+  assert.equal(workspaceTodos(owned, 'day', '', 'due-date', now).length, 4);
+  assert.equal(matchesWorkspaceAgent('cursor', 'agent:cursor'), true);
+  assert.equal(matchesWorkspaceAgent(undefined, 'unclaimed'), true);
 });
 const {
   DATA_KEY, TRASH_RETENTION_MS, MAX_BACKUP_BYTES, emptyTodoData, trashTodos,
