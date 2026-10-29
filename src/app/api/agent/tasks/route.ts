@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { agentFailure, commitAgentChange, requireAgent } from "@/lib/agent-api";
-import { addAgentTask, agentDueDate, agentName, selectAgentTasks, taskNote } from "@/lib/todo-store";
+import { addAgentTask, agentDueDate, agentName, selectAgentTasks, taskNote, taskPriority } from "@/lib/todo-store";
 import { readDocument } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +33,12 @@ export async function POST(request: Request) {
   try {
     const auth = await requireAgent(request);
     if ("error" in auth && auth.error) return auth.error;
-    const body = await request.json().catch(() => null) as { text?: unknown; list?: unknown; dueDate?: unknown; agent?: unknown; note?: unknown } | null;
+    const body = await request.json().catch(() => null) as { text?: unknown; list?: unknown; dueDate?: unknown; agent?: unknown; priority?: unknown; note?: unknown } | null;
     if (!body || typeof body.text !== "string") return NextResponse.json({ error: "Task text cannot be empty." }, { status: 400 });
     if (body.list !== undefined && typeof body.list !== "string") return NextResponse.json({ error: "List name is not valid." }, { status: 400 });
+    if (body.priority !== undefined && body.priority !== null && body.priority !== "" && typeof body.priority !== "string") {
+      return NextResponse.json({ error: "Priority must be high, medium, or low." }, { status: 400 });
+    }
     if (body.note !== undefined && typeof body.note !== "string") return NextResponse.json({ error: "Note must be 2,000 characters or fewer." }, { status: 400 });
     if (body.agent !== undefined && body.agent !== "" && typeof body.agent !== "string") {
       return NextResponse.json({ error: "Agent name must be 1–64 characters." }, { status: 400 });
@@ -43,10 +46,11 @@ export async function POST(request: Request) {
     const dueDate = agentDueDate(body.dueDate);
     const list = typeof body.list === "string" ? body.list : undefined;
     const agent = typeof body.agent === "string" && body.agent.trim() !== "" ? body.agent : undefined;
+    const priority = typeof body.priority === "string" ? taskPriority(body.priority) : undefined;
     const note = typeof body.note === "string" ? taskNote(body.note) : undefined;
     const id = crypto.randomUUID();
     const now = Date.now();
-    const saved = await commitAgentChange(auth.userId, current => addAgentTask(current, { text: body.text as string, list, dueDate, agent, note }, now, id).data);
+    const saved = await commitAgentChange(auth.userId, current => addAgentTask(current, { text: body.text as string, list, dueDate, agent, priority, note }, now, id).data);
     if (saved instanceof NextResponse) return saved;
     const task = saved.data.todos.find(todo => todo.id === id);
     if (!task) return NextResponse.json({ error: "That task was not found." }, { status: 404 });

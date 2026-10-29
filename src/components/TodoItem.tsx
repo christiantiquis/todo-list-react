@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Trash2, Pencil, Save, X, Info, CalendarIcon, Pause, Play } from "lucide-react";
-import { categoryValue, deadline } from "@/lib/todo-store";
+import { categoryValue, deadline, priorityLabel } from "@/lib/todo-store";
 import type { Todo } from "@/types/todo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ type TodoItemProps = {
   onToggle: (id: string) => void;
   onPending: (id: string, pending: boolean) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string, newCategory: string, newDueDate: number | undefined, newNote: string, expected: Todo) => Promise<boolean>;
+  onEdit: (id: string, newText: string, newCategory: string, newDueDate: number | undefined, newPriority: string, newNote: string, expected: Todo) => Promise<boolean>;
   now: Date;
   availableCategories: string[];
 };
@@ -34,6 +34,7 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
   const [editedDueDate, setEditedDueDate] = useState<Date | undefined>(
     todo.dueDate !== undefined ? new Date(todo.dueDate) : undefined
   );
+  const [editedPriority, setEditedPriority] = useState(todo.priority ?? "none");
   const [editedNote, setEditedNote] = useState(todo.note ?? "");
 
   const [error, setError] = useState("");
@@ -52,6 +53,7 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
       editedText.trim(),
       availableCategories.some(name => categoryValue(name) === editedCategory) ? editedCategory : "none",
       editedDueDate ? editedDueDate.getTime() : undefined,
+      editedPriority,
       editedNote,
       original
     );
@@ -64,6 +66,7 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
     setEditedText(todo.text);
     setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
     setEditedDueDate(todo.dueDate !== undefined ? new Date(todo.dueDate) : undefined);
+    setEditedPriority(todo.priority ?? "none");
     setEditedNote(todo.note ?? "");
     setError("");
     setIsEditing(false);
@@ -156,6 +159,15 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
                 )}
               </PopoverContent>
             </Popover>
+            <Select value={editedPriority} onValueChange={setEditedPriority}>
+              <SelectTrigger aria-label="Edit task priority" className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No priority</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
           </>
         ) : (
           <label
@@ -180,6 +192,11 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
         {todo.agent && !isEditing && (
           <Badge variant="outline" className="max-w-full break-all" aria-label={`Agent ${todo.agent}`}>
             {todo.agent}
+          </Badge>
+        )}
+        {todo.priority && !isEditing && (
+          <Badge variant={todo.priority === "high" ? "destructive" : todo.priority === "medium" ? "secondary" : "outline"} className="text-xs" aria-label={`Priority ${priorityLabel(todo.priority)}`}>
+            {priorityLabel(todo.priority)}
           </Badge>
         )}
         {todo.dueDate !== undefined && !isEditing && (
@@ -208,6 +225,7 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
               <PopoverContent aria-label="Task details" className="text-sm">
                 <p>Added: {formatDate(todo.createdAt)}</p>
                 {todo.agent && <p>Agent: {todo.agent}</p>}
+                {todo.priority && <p>Priority: {priorityLabel(todo.priority)}</p>}
                 {todo.finishedBy && <p>Finished by: {todo.finishedBy}</p>}
                 {todo.updatedAt !== undefined && <p>Updated: {formatDate(todo.updatedAt)}</p>}
                 {todo.completedAt !== undefined && <p>Completed: {formatDate(todo.completedAt)}</p>}
@@ -222,6 +240,7 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
                 setEditedText(todo.text);
                 setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
                 setEditedDueDate(todo.dueDate === undefined ? undefined : new Date(todo.dueDate));
+                setEditedPriority(todo.priority ?? "none");
                 setEditedNote(todo.note ?? "");
                 setError(""); setIsEditing(true);
               }}
