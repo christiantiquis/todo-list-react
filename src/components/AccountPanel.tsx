@@ -34,7 +34,7 @@ export function AccountPanel({ store }: { store: TodoStore }) {
             <p className="break-all text-sm font-medium leading-snug">{account.name}{account.domain && <span className="mt-0.5 block text-xs font-normal text-muted-foreground">@{account.domain}</span>}</p>
           </div>
         </div>
-        <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">Your tasks are saved to your account.</p>
+        <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">Your tasks are saved to your account. Tokens and backups are in Settings.</p>
         <Button type="button" variant="outline" size="sm" className="mt-3 w-full" disabled={store.busy} onClick={() => { void store.logout(); }}>Log out</Button>
       </div>
     );

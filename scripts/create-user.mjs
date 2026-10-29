@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import { hashPassword } from "../src/lib/password.mjs";
+import { hashPassword, minimumPasswordLength } from "../src/lib/password.mjs";
 
 const email = process.env.EMAIL?.trim().toLowerCase() ?? "";
 const password = process.env.PASSWORD ?? "";
@@ -14,7 +14,7 @@ if (!email || !email.includes("@")) {
   console.error("Set EMAIL to the account address.");
   process.exit(1);
 }
-if (password.length < 8) {
+if (password.length < minimumPasswordLength) {
   console.error("Set PASSWORD to at least 8 characters.");
   process.exit(1);
 }

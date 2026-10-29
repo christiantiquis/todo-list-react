@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
-import { ArrowDownWideNarrow, CalendarDays, CheckCheck, ChevronDown, CircleCheck, Folder, Inbox, ListTodo, Menu, Pencil, Plus, Search, Sun, Trash2, X } from "lucide-react";
+import { ArrowDownWideNarrow, CalendarDays, CheckCheck, ChevronDown, CircleCheck, Folder, Inbox, ListTodo, Menu, Pencil, Plus, Search, Settings, Sun, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTodos } from "@/hooks/use-todos";
-import { categoryValue, deadline, decodeCategory, predefinedCategories, workspaceTodos } from "@/lib/todo-store";
+import { categoryValue, deadline, decodeCategory, predefinedCategories, workspaceTodos, workspaceView } from "@/lib/todo-store";
 import { assetPath } from "@/lib/asset-path";
 import { cn } from "@/lib/utils";
 import { TodoItem } from "@/components/TodoItem";
 import { AccountPanel } from "@/components/AccountPanel";
-import { BackupDialog } from "@/components/BackupDialog";
+import { SettingsPanel } from "@/components/SettingsPanel";
 import { TrashPanel } from "@/components/TrashPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ const views = [
   { id: "upcoming", title: "Upcoming", icon: CalendarDays, description: "A clear view of what’s coming next." },
   { id: "trash", title: "Trash", icon: Trash2, description: "Deleted tasks stay here for 30 days, ready to restore." },
   { id: "completed", title: "Completed", icon: CircleCheck, description: "Take a moment to see how far you’ve come." },
+  { id: "settings", title: "Settings", icon: Settings, description: "Appearance, your account, API tokens, and backups." },
 ];
 
 export function TodoList() {
@@ -51,10 +52,28 @@ export function TodoList() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const rememberView = (next: string) => {
+    const url = new URL(window.location.href);
+    if (next === "day") url.searchParams.delete("view");
+    else url.searchParams.set("view", next);
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    if (nextUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  };
+  useLayoutEffect(() => {
+    const next = workspaceView(new URLSearchParams(window.location.search).get("view"));
+    if (next === "day") return;
+    setView(next);
+    setCategory(next.startsWith("category:") ? next : "none");
+    const today = new Date();
+    const defaultDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (next === "upcoming" ? 1 : 0));
+    setDueDate(next === "day" || next === "upcoming" ? format(defaultDate, "yyyy-MM-dd") : "");
+  }, []);
   useEffect(() => {
     if (!store.loaded) return;
     const list = decodeCategory(view);
-    if (list && !store.categories.includes(list)) { setView("all"); setSearch(""); }
+    if (list && !store.categories.includes(list)) { setView("all"); setSearch(""); rememberView("all"); }
     const selected = decodeCategory(category);
     if (selected && !store.categories.includes(selected)) setCategory("none");
   }, [store.loaded, store.categories, view, category]);
@@ -64,8 +83,9 @@ export function TodoList() {
     setCategory(next.startsWith("category:") ? next : "none");
     const defaultDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (next === "upcoming" ? 1 : 0));
     setDueDate(next === "day" || next === "upcoming" ? format(defaultDate, "yyyy-MM-dd") : "");
+    rememberView(next);
   };
-  const visible = view === "trash" ? [] : workspaceTodos(store.todos, view, search, sort, now);
+  const visible = view === "trash" || view === "settings" ? [] : workspaceTodos(store.todos, view, search, sort, now);
   const active = visible.filter(todo => !todo.completed);
   const completed = visible.filter(todo => todo.completed);
   const selectedList = decodeCategory(view);
@@ -123,10 +143,11 @@ export function TodoList() {
           <Button className="lg:hidden" variant="ghost" size="icon" aria-label="Close navigation" onClick={() => setMobileNav(false)}><X className="h-4 w-4" /></Button>
         </div>
         <nav className="space-y-1 px-3" aria-label="Views">
-          {views.map(item => {
+          {views.filter(item => item.id !== "settings").map(item => {
             const count = item.id === "trash" ? store.trash.length : workspaceTodos(store.todos, item.id, "", "default", now).filter(todo => item.id === "completed" || !todo.completed).length;
             return <button key={item.id} onClick={() => navigate(item.id)} aria-current={view === item.id ? "page" : undefined} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors hover:bg-accent", view === item.id ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground")}><item.icon className="h-[18px] w-[18px]" /><span>{item.title}</span><span className="ml-auto text-xs tabular-nums">{store.loaded ? count : "—"}</span></button>;
           })}
+          <button onClick={() => navigate("settings")} aria-current={view === "settings" ? "page" : undefined} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors hover:bg-accent", view === "settings" ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground")}><Settings className="h-[18px] w-[18px]" /><span>Settings</span></button>
         </nav>
         <div className="mx-6 my-6 border-t" />
         <div className="mb-3 flex items-center justify-between px-6"><h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Your lists</h2>
@@ -148,7 +169,6 @@ export function TodoList() {
         <div className="mt-auto px-3 pb-4 pt-2">
           <div className="overflow-hidden rounded-xl border bg-card/80">
             <AccountPanel store={store} />
-            <div className="border-t"><BackupDialog store={store} /></div>
           </div>
         </div>
       </aside>
@@ -156,14 +176,14 @@ export function TodoList() {
       <main className="min-w-0">
         <header className="flex items-center gap-3 border-b px-4 py-4 sm:px-8">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(!mobileNav)}><Menu className="h-5 w-5" /></Button>
-          <div className="relative max-w-md flex-1"><Search className="pointer-events-none absolute left-0 top-2.5 h-4 w-4 text-muted-foreground" /><Input aria-label={`Search ${title}`} placeholder="Search in this view…" value={search} onChange={event => setSearch(event.target.value)} className="border-0 bg-transparent pl-7 shadow-none focus-visible:ring-1" /></div>
+          {view !== "settings" && <div className="relative max-w-md flex-1"><Search className="pointer-events-none absolute left-0 top-2.5 h-4 w-4 text-muted-foreground" /><Input aria-label={`Search ${title}`} placeholder="Search in this view…" value={search} onChange={event => setSearch(event.target.value)} className="border-0 bg-transparent pl-7 shadow-none focus-visible:ring-1" /></div>}
           <div className="ml-auto flex items-center gap-3"><span className="hidden text-xs text-muted-foreground sm:inline">{store.loaded ? format(now, "EEE, MMM d") : "Your workspace"}</span><ThemeToggle /></div>
         </header>
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-10 sm:py-12">
           <div className="mb-8 flex items-start justify-between gap-4"><div><div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-primary"><Icon className="h-4 w-4" /> Your workspace</div><h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1><p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">{current?.description ?? "One list. A little less on your mind."}</p></div><div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex"><Icon className="h-7 w-7" strokeWidth={1.5} /></div></div>
           {store.storageMessage && <p role="alert" className="mb-5 rounded-lg border border-destructive p-3 text-sm">{store.storageMessage}</p>}
           {!store.loaded ? <p role="status" className="py-12 text-muted-foreground">Opening your tasks…</p> : <>
-            {view === "trash" ? <TrashPanel store={store} search={search} now={now} /> : <>
+            {view === "settings" ? <SettingsPanel store={store} /> : view === "trash" ? <TrashPanel store={store} search={search} now={now} /> : <>
             {view === "day" && <div className="mb-7 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground"><span><span className="font-semibold text-foreground">{active.length}</span> to focus on</span><span className="flex items-center gap-1.5"><CheckCheck className="h-3.5 w-3.5 text-primary" /><span className="font-semibold text-foreground">{completedToday}</span> completed today</span>{overdue.length > 0 && <span className="text-destructive">{overdue.length} overdue</span>}</div>}
             {view !== "completed" && <form onSubmit={addTask} className="mb-8 rounded-xl border bg-card p-2 shadow-sm focus-within:border-primary/50">
               <div className="flex items-center gap-2"><Plus className="ml-2 h-5 w-5 shrink-0 text-primary" /><Input ref={input} aria-label="New task" placeholder={selectedList ? `Add a task to ${selectedList}…` : view === "day" ? "What needs to get done today?" : "Add a task…"} value={text} onChange={event => setText(event.target.value)} className="min-w-0 border-0 bg-transparent shadow-none focus-visible:ring-0" /><Button type="submit" size="sm" disabled={!text.trim() || store.busy || !store.writable}>Add<span className="sr-only"> task</span></Button></div>

@@ -1,1 +1,1 @@
-export { createApiToken, hashApiToken } from "./api-token.mjs";
+export { createApiToken, hashApiToken, normalizeApiTokenLabel } from "./api-token.mjs";
