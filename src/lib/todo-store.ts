@@ -13,6 +13,7 @@ const todoSchema = z.object({
   category: z.string().trim().min(1).optional(), createdAt: timestamp,
   updatedAt: timestamp.optional(), completedAt: timestamp.optional(), dueDate: timestamp.optional(),
   agent: z.string().trim().min(1).max(64).optional(),
+  finishedBy: z.string().trim().min(1).max(64).optional(),
 });
 const todosSchema = z.array(todoSchema).refine(items => new Set(items.map(item => item.id)).size === items.length);
 const categoriesSchema = z.array(z.string().trim().min(1)).transform(items =>
@@ -226,14 +227,13 @@ export function completeAgentTask(data: TodoData, id: string, agent: string, now
   const name = agentName(agent);
   const todo = activeTask(data, id);
   if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
-  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
-  const task: Todo = { ...todo, agent: name, completed: true, completedAt: now, updatedAt: now };
+  const task: Todo = { ...todo, agent: todo.agent ?? name, finishedBy: name, completed: true, completedAt: now, updatedAt: now };
   return { data: replaceTask(data, task), task };
 }
 export function releaseAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
-  const name = agentName(agent);
+  agentName(agent);
   const todo = activeTask(data, id);
-  if (todo.agent !== name) throw new AgentTaskError(todo.agent ? `Claimed by ${todo.agent}.` : "That task is not claimed by this agent.", 409);
+  if (!todo.agent) throw new AgentTaskError("That task is not claimed.", 409);
   const task: Todo = { ...todo, updatedAt: now };
   delete task.agent;
   return { data: replaceTask(data, task), task };
@@ -241,8 +241,7 @@ export function releaseAgentTask(data: TodoData, id: string, agent: string, now 
 export function deleteAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
   const name = agentName(agent);
   const todo = activeTask(data, id);
-  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
-  const task: Todo = { ...todo, agent: name, updatedAt: now };
+  const task: Todo = { ...todo, agent: todo.agent ?? name, finishedBy: todo.finishedBy ?? name, updatedAt: now };
   return { data: trashTodos(replaceTask(data, task), [id], now), task };
 }
 export function updateAgentTask(

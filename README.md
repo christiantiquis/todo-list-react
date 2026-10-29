@@ -206,7 +206,7 @@ curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: applicatio
   "$TODOLIZT_URL/api/agent/tasks"
 ```
 
-Claim, complete, release, delete, or update that task. The body includes `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claiming, completing, releasing, deleting, or updating a task another agent owns returns 409. Delete moves the task to Trash for 30 days. It leaves the active list, and the same ownership rules as complete apply: an unclaimed task can be deleted, and a claimed task can be deleted only by its owner.
+Claim, complete, release, delete, or update that task. The body includes `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claim stays with one agent: claiming a task another agent already holds returns 409. Updating a task another agent owns also returns 409. Any agent on the account can complete, release, or delete a claimed task. Completing or deleting records that agent as `finishedBy` and leaves the original claim in place. Releasing clears the claim. An unclaimed task can be completed or deleted, and that agent becomes its owner. Releasing a task nobody has claimed returns 409. Delete moves the task to Trash for 30 days and leaves the active list.
 
 Update sends only the fields that change. `text` replaces the task text. `list` moves it to a project and creates that list when needed. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. An empty `list` or `dueDate` clears that field. A completed task cannot be updated.
 
