@@ -17,7 +17,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 
 - **Daily focus:** My Day brings together tasks due today and overdue tasks.
 - **Task management:** Add, edit, complete, and delete tasks with optional lists and due dates.
-- **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, and your lists.
+- **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, Settings, and your lists.
 - **Search and sorting:** Search within the current view; sort by deadline, newest first, or alphabetically.
 - **Custom lists:** Create your own lists alongside Work, Personal, and Shopping.
 - **Recoverable deletion:** Restore individual tasks or matching groups from Trash for 30 days, with a quick Undo after deletion.
@@ -31,7 +31,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 2. Expand **List & due date** to choose a list, change the deadline, or clear it.
 3. Check a task to complete it, or use its edit and details buttons.
 4. Select the **+** beside **Your lists** to create or manage custom lists.
-5. Open **Data & backup** near the bottom of the sidebar to download or import a backup.
+5. Open **Settings** for appearance, API tokens, and a backup you can download or import.
 
 New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;
@@ -178,7 +178,7 @@ so the homelab image does not use a static export.
 
 ## Agent API
 
-Agents share the signed-in account. They do not read guest tasks stored only in a browser. While signed in, open **API tokens** in the account panel to create or revoke a token. A new token is shown once. Revoking it stops that token immediately. You can also create one on the server, the same way an account is created. Store the token outside the chat, in `TODOLIZT_TOKEN`.
+Agents share the signed-in account. They do not read guest tasks stored only in a browser. While signed in, open **Settings** to create or revoke an API token. A new token is shown once. Revoking it stops that token immediately. You can also create one on the server, the same way an account is created. Store the token outside the chat, in `TODOLIZT_TOKEN`.
 
 ```sh
 docker exec -e EMAIL=you@example.com -e LABEL=agents todolizt node scripts/create-token.mjs
@@ -232,6 +232,7 @@ src/
     TodoList.tsx            Sidebar workspace and task composer
     TodoItem.tsx            Task editing, completion, and details
     BackupDialog.tsx        Backup export and import preview
+    SettingsPanel.tsx       Appearance, account, API tokens, and backups
     TrashPanel.tsx          Deleted-task search and restore
     ui/                     Shared interface components
   hooks/use-todos.ts        Task actions, storage state, and tab updates

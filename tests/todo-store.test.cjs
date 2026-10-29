@@ -98,6 +98,7 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
   assert.deepEqual(ids('completed'), ['done']);
   assert.deepEqual(ids(categoryValue('Work')), ['old', 'done']);
   assert.equal(ids('all').length, 5);
+  assert.deepEqual(ids('settings'), []);
   assert.equal(workspaceTodos(tasks, 'day', 'missing', 'default', now).length, 0);
 });
 const {

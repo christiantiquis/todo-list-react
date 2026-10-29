@@ -1,16 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type ListedToken = { id: string; label: string; createdAt: string };
 
-export function ApiTokensDialog() {
-  const [open, setOpen] = useState(false);
+export function ApiTokensPanel() {
   const [tokens, setTokens] = useState<ListedToken[]>([]);
   const [label, setLabel] = useState("");
   const [revealed, setRevealed] = useState("");
@@ -79,21 +77,12 @@ export function ApiTokensDialog() {
     }
   };
 
+  useEffect(() => { void load(); }, []);
+
   return (
-    <Dialog open={open} onOpenChange={next => {
-      setOpen(next);
-      if (next) void load();
-      else { setRevealed(""); setError(""); setLabel(""); }
-    }}>
-      <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="mt-2 w-full">API tokens</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>API tokens</DialogTitle>
-          <DialogDescription>Create a token for an agent on this account. Copy it when it appears. TodoLizt keeps only a hash, so it cannot be shown again. Revoking a token stops it immediately.</DialogDescription>
-        </DialogHeader>
-        <form className="flex gap-2" onSubmit={event => { event.preventDefault(); void create(); }}>
+    <div className="space-y-4">
+      <p className="text-xs leading-relaxed text-muted-foreground">Create a token for an agent on this account. Copy it when it appears. TodoLizt keeps only a hash, so it cannot be shown again. Revoking a token stops it immediately.</p>
+      <form className="flex gap-2" onSubmit={event => { event.preventDefault(); void create(); }}>
           <Input aria-label="New token label" placeholder="e.g. cursor" value={label} maxLength={64} onChange={event => { setLabel(event.target.value); setError(""); }} />
           <Button type="submit" disabled={working || loading}>Create</Button>
         </form>
@@ -120,7 +109,6 @@ export function ApiTokensDialog() {
             ))}
           </ul>
         )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
