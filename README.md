@@ -36,7 +36,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;
 **All Tasks** is where you can find everything. Upcoming shows active tasks due
-after today. Filter by agent to see one owner, or only tasks that no agent has claimed. Deadlines use your browser's local calendar, and undated tasks sort
+after today. The address bar keeps the view you selected, so refreshing opens that same page. My Day uses the plain address. Filter by agent to see one owner, or only tasks that no agent has claimed. Deadlines use your browser's local calendar, and undated tasks sort
 last when sorting by due date. Search applies only to the current view.
 
 ## Where your tasks are saved
@@ -192,10 +192,10 @@ export TODOLIZT_AGENT=cursor
 
 `TODOLIZT_URL` is the site origin, with no path. `TODOLIZT_AGENT` is optional. Cursor defaults to `cursor` and Codex defaults to `codex` when it is unset. Send `Authorization: Bearer` with the token. Writes retry when the account document revision changes, so an agent does not send the whole task list.
 
-List open tasks:
+List open tasks for one project. `list` is the project name and matches without regard to case. Leave it off to read every list.
 
 ```sh
-curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open"
+curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open&agent=cursor&list=billing-app"
 ```
 
 Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name.
@@ -206,7 +206,9 @@ curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: applicatio
   "$TODOLIZT_URL/api/agent/tasks"
 ```
 
-Claim, complete, release, or delete that task. The body is `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claiming, completing, releasing, or deleting a task another agent owns returns 409. Delete moves the task to Trash for 30 days. It leaves the active list, and the same ownership rules as complete apply: an unclaimed task can be deleted, and a claimed task can be deleted only by its owner.
+Claim, complete, release, delete, or update that task. The body includes `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claiming, completing, releasing, deleting, or updating a task another agent owns returns 409. Delete moves the task to Trash for 30 days. It leaves the active list, and the same ownership rules as complete apply: an unclaimed task can be deleted, and a claimed task can be deleted only by its owner.
+
+Update sends only the fields that change. `text` replaces the task text. `list` moves it to a project and creates that list when needed. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. An empty `list` or `dueDate` clears that field. A completed task cannot be updated.
 
 ```sh
 curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
@@ -217,9 +219,12 @@ curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: ap
   -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/release"
 curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
   -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/delete"
+curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
+  -d '{"agent":"cursor","text":"Ship the invoice export","dueDate":"2026-10-29"}' \
+  "$TODOLIZT_URL/api/agent/tasks/$ID/update"
 ```
 
-`status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
+`status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner and `&list=billing-app` to keep one project. A blank list name is rejected. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
 
 From another repository, say: "Add a TodoLizt task for this project: ship the invoice export." The agent uses the current folder name as `list` and its own name as `agent`.
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import { ArrowDownWideNarrow, CalendarDays, CheckCheck, ChevronDown, CircleCheck, Folder, Inbox, ListTodo, Menu, Plus, Search, Settings, Sun, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTodos } from "@/hooks/use-todos";
-import { categoryValue, deadline, decodeCategory, matchesWorkspaceAgent, predefinedCategories, workspaceTodos } from "@/lib/todo-store";
+import { categoryValue, deadline, decodeCategory, matchesWorkspaceAgent, predefinedCategories, workspaceTodos, workspaceView } from "@/lib/todo-store";
 import { assetPath } from "@/lib/asset-path";
 import { cn } from "@/lib/utils";
 import { TodoItem } from "@/components/TodoItem";
@@ -50,10 +50,28 @@ export function TodoList() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const rememberView = (next: string) => {
+    const url = new URL(window.location.href);
+    if (next === "day") url.searchParams.delete("view");
+    else url.searchParams.set("view", next);
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    if (nextUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  };
+  useLayoutEffect(() => {
+    const next = workspaceView(new URLSearchParams(window.location.search).get("view"));
+    if (next === "day") return;
+    setView(next);
+    setCategory(next.startsWith("category:") ? next : "none");
+    const today = new Date();
+    const defaultDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (next === "upcoming" ? 1 : 0));
+    setDueDate(next === "day" || next === "upcoming" ? format(defaultDate, "yyyy-MM-dd") : "");
+  }, []);
   useEffect(() => {
     if (!store.loaded) return;
     const list = decodeCategory(view);
-    if (list && !store.categories.includes(list)) { setView("all"); setSearch(""); }
+    if (list && !store.categories.includes(list)) { setView("all"); setSearch(""); rememberView("all"); }
     const selected = decodeCategory(category);
     if (selected && !store.categories.includes(selected)) setCategory("none");
   }, [store.loaded, store.categories, view, category]);
@@ -63,6 +81,7 @@ export function TodoList() {
     setCategory(next.startsWith("category:") ? next : "none");
     const defaultDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (next === "upcoming" ? 1 : 0));
     setDueDate(next === "day" || next === "upcoming" ? format(defaultDate, "yyyy-MM-dd") : "");
+    rememberView(next);
   };
   const agentNames = [...new Set([...store.todos, ...store.trash.map(entry => entry.todo)].flatMap(todo => todo.agent ? [todo.agent] : []))].sort((a, b) => a.localeCompare(b));
   const ownerFilter = owner === "all" || owner === "unclaimed" || agentNames.some(name => owner === `agent:${name}`) ? owner : "all";

@@ -245,13 +245,53 @@ export function deleteAgentTask(data: TodoData, id: string, agent: string, now =
   const task: Todo = { ...todo, agent: name, updatedAt: now };
   return { data: trashTodos(replaceTask(data, task), [id], now), task };
 }
+export function updateAgentTask(
+  data: TodoData,
+  id: string,
+  input: { agent: string; text?: string; list?: string | null; dueDate?: number | null },
+  now = Date.now(),
+) {
+  const name = agentName(input.agent);
+  const todo = activeTask(data, id);
+  if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
+  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
+  if (!("text" in input) && !("list" in input) && !("dueDate" in input)) {
+    throw new AgentTaskError("Choose text, a list, or a due date to update.", 400);
+  }
+  let text = todo.text;
+  if ("text" in input) {
+    text = input.text?.trim() ?? "";
+    if (!text) throw new AgentTaskError("Task text cannot be empty.", 400);
+  }
+  let nextData = data;
+  let category = todo.category;
+  if ("list" in input) {
+    const raw = input.list ?? "";
+    if (raw.trim() === "") category = undefined;
+    else {
+      const listed = listedTask(data, raw);
+      nextData = listed.data;
+      category = listed.category;
+    }
+  }
+  let dueDate = todo.dueDate;
+  if ("dueDate" in input) dueDate = input.dueDate === null ? undefined : dueStamp(input.dueDate);
+  const task: Todo = { ...todo, text, agent: name, updatedAt: now };
+  if (category) task.category = category;
+  else delete task.category;
+  if (dueDate !== undefined) task.dueDate = dueDate;
+  else delete task.dueDate;
+  return { data: replaceTask(nextData, task), task };
+}
 export function findAgentTask(data: TodoData, id: string) {
   return data.todos.find(todo => todo.id === id) ?? data.trash.find(entry => entry.todo.id === id)?.todo;
 }
-export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string) {
+export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string, list?: string) {
+  const project = list?.trim().toLowerCase();
   return todos.filter(todo =>
     (status === "all" || (status === "done" ? todo.completed : !todo.completed)) &&
-    (!agent || todo.agent === agent));
+    (!agent || todo.agent === agent) &&
+    (!project || todo.category?.toLowerCase() === project));
 }
 export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number): Todo[] {
   if (!text.trim()) throw new Error("Task text cannot be empty.");
@@ -291,6 +331,12 @@ export function matchesWorkspaceAgent(agent: string | undefined, owner = "all") 
   if (owner === "unclaimed") return !agent;
   if (owner.startsWith("agent:")) return agent === owner.slice(6);
   return agent === owner;
+}
+const builtinViews = new Set(["day", "all", "upcoming", "trash", "completed", "settings"]);
+export function workspaceView(value: string | null | undefined) {
+  const list = value ? decodeCategory(value) : undefined;
+  if (value && (builtinViews.has(value) || (list && value === categoryValue(list)))) return value;
+  return "day";
 }
 export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date, owner = "all") {
   if (view === "settings") return [];
