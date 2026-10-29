@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { agentFailure, commitAgentChange, requireAgent } from "./agent-api";
-import { AgentTaskError, type TodoData } from "./todo-store";
+import { AgentTaskError, findAgentTask, type TodoData } from "./todo-store";
 import type { Todo } from "@/types/todo";
 
 type TaskChange = (data: TodoData, id: string, agent: string, now: number) => { data: TodoData; task: Todo };
@@ -15,7 +15,7 @@ export async function agentTaskAction(request: Request, id: string, change: Task
     const now = Date.now();
     const saved = await commitAgentChange(auth.userId, current => change(current, id, agent, now).data);
     if (saved instanceof NextResponse) return saved;
-    const task = saved.data.todos.find(todo => todo.id === id);
+    const task = findAgentTask(saved.data, id);
     if (!task) return NextResponse.json({ error: "That task was not found." }, { status: 404 });
     return NextResponse.json(task);
   } catch (error) {

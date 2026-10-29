@@ -206,7 +206,7 @@ curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: applicatio
   "$TODOLIZT_URL/api/agent/tasks"
 ```
 
-Claim, complete, or release that task. The body is `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claiming a task another agent owns returns 409.
+Claim, complete, release, or delete that task. The body is `{ "agent": "cursor" }`. Replace `$ID` with the task id from the create response. Claiming, completing, releasing, or deleting a task another agent owns returns 409. Delete moves the task to Trash for 30 days. It leaves the active list, and the same ownership rules as complete apply: an unclaimed task can be deleted, and a claimed task can be deleted only by its owner.
 
 ```sh
 curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
@@ -215,6 +215,8 @@ curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: ap
   -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/complete"
 curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
   -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/release"
+curl -sS -X POST -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
+  -d '{"agent":"cursor"}' "$TODOLIZT_URL/api/agent/tasks/$ID/delete"
 ```
 
 `status` is `open` (the default), `done`, or `all`. Add `&agent=cursor` to keep one owner. Responses are one task, or `{ "tasks": [...] }` for the list. Failures are `{ "error": "..." }` with status 400, 401, 404, or 409.
