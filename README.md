@@ -19,7 +19,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 - **Task management:** Add, edit, complete, and delete tasks with optional lists and due dates.
 - **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, and your lists.
 - **Search and sorting:** Search within the current view; sort by deadline, newest first, or alphabetically.
-- **Custom lists:** Create your own lists alongside Work, Personal, and Shopping.
+- **Custom lists:** Create, rename, or remove your own lists alongside Work, Personal, and Shopping.
 - **Recoverable deletion:** Restore individual tasks or matching groups from Trash for 30 days, with a quick Undo after deletion.
 - **Portable backups:** Export JSON backups and preview validated imports before merging them.
 - **Safer multi-tab use:** Tabs refresh when saved data changes; stale edits cannot silently overwrite a newer task.
@@ -30,7 +30,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 1. Open **My Day** and type a task into the task composer. Press Enter or select **Add**.
 2. Expand **List & due date** to choose a list, change the deadline, or clear it.
 3. Check a task to complete it, or use its edit and details buttons.
-4. Select the **+** beside **Your lists** to create or manage custom lists.
+4. Select the **+** beside **Your lists** to create, rename, or remove a custom list. Work, Personal, and Shopping stay as they are. Renaming keeps every task, including tasks in Trash, on that list.
 5. Open **Data & backup** near the bottom of the sidebar to download or import a backup.
 
 New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the

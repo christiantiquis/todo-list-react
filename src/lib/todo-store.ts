@@ -257,6 +257,23 @@ export function editTodo(todos: Todo[], id: string, text: string, category?: str
   if (!text.trim()) throw new Error("Task text cannot be empty.");
   return todos.map(todo => todo.id === id ? { ...todo, text: text.trim(), category, dueDate, updatedAt: Date.now() } : todo);
 }
+export function renameCategory(data: TodoData, from: string, to: string, now = Date.now()): TodoData {
+  const current = from.trim();
+  const next = to.trim();
+  if (predefinedCategories.includes(current)) throw new Error("That list cannot be renamed.");
+  if (!current || !data.customCategories.includes(current)) throw new Error("That list was not found.");
+  if (!next) throw new Error("List name cannot be empty.");
+  if ([...predefinedCategories, ...data.customCategories].some(name => name !== current && name.toLowerCase() === next.toLowerCase())) {
+    throw new Error("List already exists.");
+  }
+  if (next === current) return data;
+  return {
+    ...data,
+    customCategories: data.customCategories.map(name => name === current ? next : name),
+    todos: data.todos.map(todo => todo.category === current ? { ...todo, category: next, updatedAt: now } : todo),
+    trash: data.trash.map(entry => entry.todo.category === current ? { ...entry, todo: { ...entry.todo, category: next } } : entry),
+  };
+}
 export function deleteCategory(data: TodoData, category: string): TodoData {
   if (predefinedCategories.includes(category)) return data;
   return {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  assertTaskUnchanged, commitTodoChange, createBackup, DATA_KEY, deleteCategory,
+  assertTaskUnchanged, commitTodoChange, createBackup, DATA_KEY, deleteCategory, renameCategory,
   editTodo, emptyTodoData, loadTodoData, mergeBackup, nextTodoData, parseTodoData, predefinedCategories,
   pruneTrash, restoreTrash, saveTodoData, trashTodos, TodoConflictError, type TodoData,
 } from "@/lib/todo-store";
@@ -311,6 +311,7 @@ export function useTodos() {
         return { ...current, customCategories: [...current.customCategories, name.trim()] };
       }, false);
     },
+    async renameCategory(from: string, to: string) { return mutate(current => renameCategory(current, from, to), false); },
     async deleteCategory(name: string) { return !(await mutate(current => deleteCategory(current, name))); },
     async importBackup(incoming: TodoData) { return !(await mutate(current => mergeBackup(current, incoming))); },
     exportBackup() { return createBackup(dataRef.current); },

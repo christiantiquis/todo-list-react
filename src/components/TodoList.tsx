@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
-import { ArrowDownWideNarrow, CalendarDays, CheckCheck, ChevronDown, CircleCheck, Folder, Inbox, ListTodo, Menu, Plus, Search, Sun, Trash2, X } from "lucide-react";
+import { ArrowDownWideNarrow, CalendarDays, CheckCheck, ChevronDown, CircleCheck, Folder, Inbox, ListTodo, Menu, Pencil, Plus, Search, Sun, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useTodos } from "@/hooks/use-todos";
 import { categoryValue, deadline, decodeCategory, predefinedCategories, workspaceTodos } from "@/lib/todo-store";
@@ -39,6 +39,9 @@ export function TodoList() {
   const [mobileNav, setMobileNav] = useState(false);
   const [newList, setNewList] = useState("");
   const [listError, setListError] = useState("");
+  const [renameFrom, setRenameFrom] = useState("");
+  const [renameTo, setRenameTo] = useState("");
+  const [renameError, setRenameError] = useState("");
   const [manageOpen, setManageOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const input = useRef<HTMLInputElement>(null);
@@ -91,6 +94,15 @@ export function TodoList() {
     if (error) { setListError(error); return; }
     navigate(categoryValue(newList.trim())); setNewList(""); setListError(""); setManageOpen(false);
   };
+  const renameList = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const next = renameTo.trim();
+    const error = await store.renameCategory(renameFrom, next);
+    if (error) { setRenameError(error); return; }
+    if (view === categoryValue(renameFrom)) setView(categoryValue(next));
+    if (category === categoryValue(renameFrom)) setCategory(categoryValue(next));
+    setRenameFrom(""); setRenameError("");
+  };
   const renderTasks = (items: typeof store.todos, label: string) => items.length > 0 && (
     <section className="mb-7" aria-label={label}>
       <div className="mb-3 flex items-center gap-2 px-1">
@@ -118,13 +130,17 @@ export function TodoList() {
         </nav>
         <div className="mx-6 my-6 border-t" />
         <div className="mb-3 flex items-center justify-between px-6"><h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Your lists</h2>
-          <Dialog open={manageOpen} onOpenChange={setManageOpen}>
+          <Dialog open={manageOpen} onOpenChange={open => { setManageOpen(open); if (!open) { setRenameFrom(""); setRenameError(""); } }}>
             <DialogTrigger asChild><button aria-label="Manage lists" className="rounded p-1 hover:bg-accent"><Plus className="h-4 w-4 text-muted-foreground" /></button></DialogTrigger>
             <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-md">
-              <DialogHeader><DialogTitle>Your lists</DialogTitle><DialogDescription>Create a space for a project or part of your life. Removing a list keeps its tasks in All Tasks.</DialogDescription></DialogHeader>
+              <DialogHeader><DialogTitle>Your lists</DialogTitle><DialogDescription>Create a space for a project or part of your life. Rename a custom list to keep its tasks under the new name. Removing a list keeps its tasks in All Tasks.</DialogDescription></DialogHeader>
               <form onSubmit={addList} className="flex gap-2"><Input aria-label="New list name" placeholder="e.g. Weekend projects" value={newList} onChange={event => { setNewList(event.target.value); setListError(""); }} /><Button type="submit" disabled={store.busy || !store.writable}>Create</Button></form>
               {listError && <p role="alert" className="text-sm text-destructive">{listError}</p>}
-              <ul className="max-h-64 space-y-1 overflow-y-auto">{store.categories.map(name => <li key={name} className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2"><span className="min-w-0 break-words text-sm">{name}</span>{!predefinedCategories.includes(name) && <Button variant="ghost" size="icon" aria-label={`Delete list ${name}`} onClick={async () => { if (!(await store.deleteCategory(name))) return; if (view === categoryValue(name)) navigate("all"); if (category === categoryValue(name)) setCategory("none"); }}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}</li>)}</ul>
+              <ul className="max-h-64 space-y-1 overflow-y-auto">{store.categories.map(name => {
+                const custom = !predefinedCategories.includes(name);
+                const editing = renameFrom === name;
+                return <li key={name} className="rounded-lg bg-muted/50 px-3 py-2">{editing ? <form onSubmit={renameList} className="flex gap-2"><Input aria-label={`New name for ${name}`} value={renameTo} onChange={event => { setRenameTo(event.target.value); setRenameError(""); }} /><Button type="submit" size="sm" disabled={store.busy || !store.writable}>Save</Button><Button type="button" variant="ghost" size="sm" onClick={() => { setRenameFrom(""); setRenameError(""); }}>Cancel</Button></form> : <div className="flex items-center justify-between gap-2"><span className="min-w-0 break-words text-sm">{name}</span>{custom && <div className="flex shrink-0"><Button variant="ghost" size="icon" aria-label={`Rename list ${name}`} disabled={store.busy || !store.writable} onClick={() => { setRenameFrom(name); setRenameTo(name); setRenameError(""); }}><Pencil className="h-4 w-4 text-muted-foreground" /></Button><Button variant="ghost" size="icon" aria-label={`Delete list ${name}`} onClick={async () => { if (!(await store.deleteCategory(name))) return; if (renameFrom === name) { setRenameFrom(""); setRenameError(""); } if (view === categoryValue(name)) navigate("all"); if (category === categoryValue(name)) setCategory("none"); }}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button></div>}</div>}{editing && renameError && <p role="alert" className="mt-2 text-sm text-destructive">{renameError}</p>}</li>;
+              })}</ul>
             </DialogContent>
           </Dialog>
         </div>
