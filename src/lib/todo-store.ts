@@ -20,6 +20,7 @@ const todoSchema = z.object({
   updatedAt: timestamp.optional(), completedAt: timestamp.optional(), dueDate: timestamp.optional(),
   agent: z.string().trim().min(1).max(64).optional(),
   priority: z.enum(taskPriorities).optional(),
+  note: z.string().trim().min(1).max(2000).optional(),
   finishedBy: z.string().trim().min(1).max(64).optional(),
 });
 const todosSchema = z.array(todoSchema).refine(items => new Set(items.map(item => item.id)).size === items.length);
@@ -204,6 +205,12 @@ export function taskPriority(value?: string | null): TaskPriority | undefined {
   if (!parsed.success) throw new AgentTaskError("Priority must be high, medium, or low.", 400);
   return parsed.data;
 }
+export function taskNote(value?: string) {
+  const note = value?.trim() ?? "";
+  if (!note) return undefined;
+  if (note.length > 2000) throw new AgentTaskError("Note must be 2,000 characters or fewer.", 400);
+  return note;
+}
 export function agentDueDate(value: unknown) {
   if (value === undefined || value === null || value === "") return undefined;
   if (typeof value === "number") return dueStamp(value);
@@ -212,7 +219,7 @@ export function agentDueDate(value: unknown) {
 }
 export function addAgentTask(
   data: TodoData,
-  input: { text: string; list?: string; dueDate?: number; agent?: string; priority?: string },
+  input: { text: string; list?: string; dueDate?: number; agent?: string; priority?: string; note?: string },
   now = Date.now(),
   id = crypto.randomUUID(),
 ) {
@@ -222,12 +229,14 @@ export function addAgentTask(
   const owner = input.agent === undefined || input.agent.trim() === "" ? undefined : agentName(input.agent);
   const dueDate = dueStamp(input.dueDate);
   const priority = taskPriority(input.priority);
+  const note = taskNote(input.note);
   const task: Todo = {
     id, text, completed: false, createdAt: now,
     ...(listed.category ? { category: listed.category } : {}),
     ...(dueDate !== undefined ? { dueDate } : {}),
     ...(owner ? { agent: owner } : {}),
     ...(priority ? { priority } : {}),
+    ...(note ? { note } : {}),
   };
   return { data: { ...listed.data, todos: [...listed.data.todos, task] }, task };
 }
@@ -308,16 +317,21 @@ export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all",
     (!agent || todo.agent === agent) &&
     (!project || todo.category?.toLowerCase() === project));
 }
-export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number, priority?: string): Todo[] {
+export function editTodo(todos: Todo[], id: string, text: string, category?: string, dueDate?: number, priority?: string, note?: string): Todo[] {
   if (!text.trim()) throw new Error("Task text cannot be empty.");
   let nextPriority: TaskPriority | undefined;
+  let trimmedNote: string | undefined;
   try { nextPriority = taskPriority(priority); }
   catch (error) { throw new Error(error instanceof Error ? error.message : "Priority must be high, medium, or low."); }
+  try { trimmedNote = taskNote(note); }
+  catch (error) { throw new Error(error instanceof Error ? error.message : "Note must be 2,000 characters or fewer."); }
   return todos.map(todo => {
     if (todo.id !== id) return todo;
     const next: Todo = { ...todo, text: text.trim(), category, dueDate, updatedAt: Date.now() };
     if (nextPriority) next.priority = nextPriority;
     else delete next.priority;
+    if (trimmedNote) next.note = trimmedNote;
+    else delete next.note;
     return next;
   });
 }
@@ -341,7 +355,8 @@ export function deadline(todo: Todo, now: Date) {
   return todo.dueDate < today ? "overdue" : todo.dueDate < tomorrow ? "today" : "upcoming";
 }
 export function selectTodos(todos: Todo[], search: string, category: string, status: string, due: string, sort: string, now: Date) {
-  return todos.filter(todo => todo.text.toLowerCase().includes(search.trim().toLowerCase()) &&
+  const query = search.trim().toLowerCase();
+  return todos.filter(todo => (todo.text.toLowerCase().includes(query) || (todo.note?.toLowerCase().includes(query) ?? false)) &&
     (category === "all" || todo.category === decodeCategory(category)) &&
     (status === "All" || (status === "Completed" ? todo.completed : !todo.completed)) &&
     (due === "all" || deadline(todo, now) === due))

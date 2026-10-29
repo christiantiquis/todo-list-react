@@ -295,11 +295,11 @@ export function useTodos() {
         } : todo) };
       });
     },
-    async edit(id: string, text: string, category: string | undefined, dueDate: number | undefined, priority: string, expected: Todo) {
+    async edit(id: string, text: string, category: string | undefined, dueDate: number | undefined, priority: string, note: string, expected: Todo) {
       return !(await mutate(current => {
         assertTaskUnchanged(current, expected);
         validCategory(current, category);
-        return { ...current, todos: editTodo(current.todos, id, text, category, dueDate, priority) };
+        return { ...current, todos: editTodo(current.todos, id, text, category, dueDate, priority, note) };
       }));
     },
     remove(id: string) { return remove([id]); },

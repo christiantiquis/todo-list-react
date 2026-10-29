@@ -16,9 +16,9 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 ## Features
 
 - **Daily focus:** My Day brings together tasks due today and overdue tasks.
-- **Task management:** Add, edit, complete, and delete tasks with optional lists, due dates, and priorities.
+- **Task management:** Add, edit, complete, and delete tasks with optional lists, due dates, notes, and priorities.
 - **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, Settings, and your lists.
-- **Search and sorting:** Search within the current view; sort by deadline, priority, newest first, or alphabetically.
+- **Search and sorting:** Search task text and notes within the current view; sort by deadline, priority, newest first, or alphabetically.
 - **Custom lists:** Create your own lists alongside Work, Personal, and Shopping.
 - **Recoverable deletion:** Restore individual tasks or matching groups from Trash for 30 days, with a quick Undo after deletion.
 - **Portable backups:** Export JSON backups and preview validated imports before merging them.
@@ -29,7 +29,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 
 1. Open **My Day** and type a task into the task composer. Press Enter or select **Add**.
 2. Expand **List, date & priority** to choose a list, change the deadline, or mark a task high, medium, or low.
-3. Check a task to complete it, or use its edit and details buttons.
+3. Check a task to complete it, or use its edit button to change the text, list, due date, note, or priority.
 4. Select the **+** beside **Your lists** to create or manage custom lists.
 5. Open **Settings** for appearance, your password, API tokens, and a backup you can download or import.
 
@@ -37,7 +37,7 @@ New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;
 **All Tasks** is where you can find everything. Upcoming shows active tasks due
 after today. The address bar keeps the view you selected, so refreshing opens that same page. My Day uses the plain address. Filter by agent to see one owner, or only tasks that no agent has claimed. Deadlines use your browser's local calendar, and undated tasks sort
-last when sorting by due date. Sorting by priority puts high first and leaves tasks with no priority last. Search applies only to the current view.
+last when sorting by due date. Sorting by priority puts high first and leaves tasks with no priority last. Search matches task text and notes in the current view. A note can be up to 2,000 characters, and clearing it removes the note.
 
 ## Where your tasks are saved
 
@@ -198,7 +198,7 @@ List open tasks for one project. `list` is the project name and matches without 
 curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" "$TODOLIZT_URL/api/agent/tasks?status=open&agent=cursor&list=billing-app"
 ```
 
-Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name. `priority` is optional: `high`, `medium`, or `low`.
+Create a task. `list` is the project name. A list that does not exist yet is created. `dueDate` is a millisecond timestamp or `YYYY-MM-DD`. `agent` claims the task for that name. `note` is optional and limited to 2,000 characters. `priority` is optional: `high`, `medium`, or `low`.
 
 ```sh
 curl -sS -H "Authorization: Bearer $TODOLIZT_TOKEN" -H "content-type: application/json" \
