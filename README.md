@@ -31,7 +31,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 2. Expand **List & due date** to choose a list, change the deadline, or clear it.
 3. Check a task to complete it, or use its edit and details buttons.
 4. Select the **+** beside **Your lists** to create or manage custom lists.
-5. Open **Settings** for appearance, API tokens, and a backup you can download or import.
+5. Open **Settings** for appearance, your password, API tokens, and a backup you can download or import.
 
 New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;

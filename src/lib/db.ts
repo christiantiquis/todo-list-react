@@ -27,6 +27,12 @@ export function ensureDatabase() {
 
 export type AccountUser = { id: string; email: string; passwordHash: string };
 
+export async function updateUserPassword(userId: string, passwordHash: string) {
+  await ensureDatabase();
+  const result = await getPool().query("UPDATE users SET password_hash = $2 WHERE id = $1", [userId, passwordHash]);
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function findUserByEmail(email: string): Promise<AccountUser | null> {
   await ensureDatabase();
   const result = await getPool().query<{ id: string; email: string; password_hash: string }>(

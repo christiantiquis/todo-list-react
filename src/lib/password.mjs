@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 
 const scrypt = promisify(scryptCallback);
 const keyLength = 64;
+export const minimumPasswordLength = 8;
 
 export async function hashPassword(password) {
   const salt = randomBytes(16).toString("hex");
