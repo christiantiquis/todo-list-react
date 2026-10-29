@@ -287,6 +287,7 @@ export function selectTodos(todos: Todo[], search: string, category: string, sta
 }
 
 export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date) {
+  if (view === "settings") return [];
   const tasks = todos.filter(todo => {
     if (view === "day") return ["today", "overdue"].includes(deadline(todo, now));
     if (view === "upcoming") return deadline(todo, now) === "upcoming";
