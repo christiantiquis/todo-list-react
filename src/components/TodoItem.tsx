@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pencil, Save, X, Info, CalendarIcon } from "lucide-react";
+import { Trash2, Pencil, Save, X, Info, CalendarIcon, Pause, Play } from "lucide-react";
 import { categoryValue, deadline, priorityLabel } from "@/lib/todo-store";
 import type { Todo } from "@/types/todo";
 import { cn } from "@/lib/utils";
@@ -18,13 +18,14 @@ import { format } from "date-fns";
 type TodoItemProps = {
   todo: Todo;
   onToggle: (id: string) => void;
+  onPending: (id: string, pending: boolean) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newText: string, newCategory: string, newDueDate: number | undefined, newPriority: string, newNote: string, expected: Todo) => Promise<boolean>;
   now: Date;
   availableCategories: string[];
 };
 
-export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCategories }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, availableCategories }: TodoItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [original, setOriginal] = useState(todo);
   const [saving, setSaving] = useState(false);
@@ -182,6 +183,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
         {todo.note && !isEditing && (
           <p className="basis-full whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{todo.note}</p>
         )}
+        {todo.pending && !todo.completed && !isEditing && <Badge variant="secondary">Pending</Badge>}
         {todo.category && !isEditing && (
           <Badge variant="secondary" className="max-w-full break-all">
             {todo.category}
@@ -215,6 +217,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
           </>
         ) : (
           <>
+            {!todo.completed && <Button variant="ghost" size="icon" onClick={() => onPending(todo.id, !todo.pending)} aria-label={`${todo.pending ? "Resume" : "Put on hold:"} ${todo.text}`} title={todo.pending ? "Resume task" : "Put task on hold"}>{todo.pending ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</Button>}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={`Details for ${todo.text}`}><Info className="h-4 w-4" /></Button>

@@ -2,6 +2,7 @@ export type Todo = {
   id: string;
   text: string;
   completed: boolean;
+  pending?: boolean; // Task is on hold until resumed
   category?: string; // Made category field optional
   createdAt: number; // Added createdAt field to store timestamp
   updatedAt?: number; // Added updatedAt field for last edit timestamp

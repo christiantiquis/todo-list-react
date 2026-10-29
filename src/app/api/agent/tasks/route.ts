@@ -5,7 +5,7 @@ import { readDocument } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const statuses = ["open", "done", "all"] as const;
+const statuses = ["open", "pending", "done", "all"] as const;
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const status = url.searchParams.get("status") ?? "open";
     if (!statuses.includes(status as typeof statuses[number])) {
-      return NextResponse.json({ error: "Status must be open, done, or all." }, { status: 400 });
+      return NextResponse.json({ error: "Status must be open, pending, done, or all." }, { status: 400 });
     }
     const agentQuery = url.searchParams.get("agent");
     const agent = agentQuery ? agentName(agentQuery) : undefined;
