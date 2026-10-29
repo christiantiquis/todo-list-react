@@ -9,6 +9,7 @@ import type { Todo } from "@/types/todo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,7 +19,7 @@ type TodoItemProps = {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string, newCategory: string, newDueDate: number | undefined, expected: Todo) => Promise<boolean>;
+  onEdit: (id: string, newText: string, newCategory: string, newDueDate: number | undefined, newNote: string, expected: Todo) => Promise<boolean>;
   now: Date;
   availableCategories: string[];
 };
@@ -32,6 +33,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
   const [editedDueDate, setEditedDueDate] = useState<Date | undefined>(
     todo.dueDate !== undefined ? new Date(todo.dueDate) : undefined
   );
+  const [editedNote, setEditedNote] = useState(todo.note ?? "");
 
   const [error, setError] = useState("");
   const dueStatus = deadline(todo, now);
@@ -49,6 +51,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
       editedText.trim(),
       availableCategories.some(name => categoryValue(name) === editedCategory) ? editedCategory : "none",
       editedDueDate ? editedDueDate.getTime() : undefined,
+      editedNote,
       original
     );
     setSaving(false);
@@ -60,6 +63,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
     setEditedText(todo.text);
     setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
     setEditedDueDate(todo.dueDate !== undefined ? new Date(todo.dueDate) : undefined);
+    setEditedNote(todo.note ?? "");
     setError("");
     setIsEditing(false);
   };
@@ -100,6 +104,14 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
                 }
               }}
               className="min-w-0 flex-1 basis-full"
+            />
+            <Textarea
+              aria-label="Task note"
+              value={editedNote}
+              maxLength={2000}
+              placeholder="Add a note"
+              onChange={event => setEditedNote(event.target.value)}
+              className="min-h-20 basis-full"
             />
             {error && <p id={`error-${todo.id}`} role="alert" className="w-full text-sm text-destructive">{error}</p>}
             <Select onValueChange={setEditedCategory} value={availableCategories.some(name => categoryValue(name) === editedCategory) ? editedCategory : "none"}>
@@ -155,6 +167,9 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
             {todo.text}
           </label>
         )}
+        {todo.note && !isEditing && (
+          <p className="basis-full whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">{todo.note}</p>
+        )}
         {todo.category && !isEditing && (
           <Badge variant="secondary" className="max-w-full break-all">
             {todo.category}
@@ -203,6 +218,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
                 setEditedText(todo.text);
                 setEditedCategory(todo.category ? categoryValue(todo.category) : "none");
                 setEditedDueDate(todo.dueDate === undefined ? undefined : new Date(todo.dueDate));
+                setEditedNote(todo.note ?? "");
                 setError(""); setIsEditing(true);
               }}
               aria-label="Edit todo"
