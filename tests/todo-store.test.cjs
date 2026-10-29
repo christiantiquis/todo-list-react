@@ -129,7 +129,7 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
 });
 const {
   DATA_KEY, TRASH_RETENTION_MS, MAX_BACKUP_BYTES, emptyTodoData, trashTodos,
-  restoreTrash, pruneTrash, createBackup, parseBackup, mergeBackup,
+  restoreTrash, pruneTrash, createBackup, parseBackup, mergeBackup, mergeGuestTasks,
   commitTodoChange, assertTaskUnchanged, TodoConflictError,
 } = require('../src/lib/todo-store.ts');
 const now = new Date(2026, 9, 27, 12).getTime();
@@ -210,6 +210,31 @@ test('import never overwrites active or deleted IDs and is repeatable', () => {
   assert.equal(merged.trash.length, 1);
   assert.ok(merged.customCategories.includes('Project'));
   assert.deepEqual(mergeBackup(merged, incoming, now), merged);
+});
+test('signing in adds browser tasks that the account does not already have', () => {
+  const account = trashTodos(dataWith([task({ text: 'Account' })]), [], now);
+  const guest = {
+    ...dataWith([
+      task({ text: 'Stale account copy' }),
+      task({ id: 'browser', text: 'From the browser', category: 'Weekend' }),
+    ]),
+    customCategories: ['Weekend', 'Empty'],
+    trash: [
+      { todo: task({ id: 'gone', text: 'Deleted here' }), deletedAt: now },
+      { todo: task({ id: 'old', text: 'Expired' }), deletedAt: now - TRASH_RETENTION_MS },
+    ],
+  };
+  const first = mergeGuestTasks(account, guest, now);
+  assert.equal(first.tasks, 2);
+  assert.equal(first.lists, 2);
+  assert.equal(first.data.todos.find(todo => todo.id === 'one').text, 'Account');
+  assert.equal(first.data.todos.find(todo => todo.id === 'browser').category, 'Weekend');
+  assert.equal(first.data.trash.length, 1);
+  assert.deepEqual(first.data.customCategories, ['Weekend', 'Empty']);
+  const again = mergeGuestTasks(first.data, guest, now);
+  assert.equal(again.tasks, 0);
+  assert.equal(again.lists, 0);
+  assert.deepEqual(mergeGuestTasks(account, emptyTodoData(), now), { data: account, tasks: 0, lists: 0 });
 });
 test('concurrent tab changes are serialized and preserve distinct additions', async () => {
   const saved = storage();

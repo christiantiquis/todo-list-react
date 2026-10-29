@@ -48,7 +48,7 @@ export function AccountPanel({ store }: { store: TodoStore }) {
     }}>
       <div>
         <p className="text-sm font-medium">Sign in</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Your tasks stay saved in this browser.</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">Tasks in this browser are added to your account.</p>
       </div>
       <div className="space-y-1">
         <label htmlFor="account-email" className="text-[11px] font-medium text-muted-foreground">Email</label>
