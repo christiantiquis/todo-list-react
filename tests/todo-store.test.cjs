@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { loadTodoData, saveTodoData, editTodo, deleteCategory, categoryValue, decodeCategory, selectTodos, deadline, restoreTodos } = require('../src/lib/todo-store.ts');
+const { loadTodoData, saveTodoData, editTodo, deleteCategory, renameCategory, categoryValue, decodeCategory, selectTodos, deadline, restoreTodos } = require('../src/lib/todo-store.ts');
 const task = (patch = {}) => ({ id: 'one', text: 'Buy milk', completed: false, createdAt: 1, ...patch });
 function storage(initial = {}) {
   const values = new Map(Object.entries(initial));
@@ -76,6 +76,27 @@ test('category deletion removes assignments but protects built-in categories', (
   assert.equal(result.todos[0].category, undefined);
   assert.equal(result.todos[1].category, 'Work');
   assert.equal(deleteCategory(data, 'Work'), data);
+});
+test('renaming a custom list keeps its tasks and protects built-in names', () => {
+  const data = {
+    todos: [task({ category: 'Weekend' }), task({ id: 'two', category: 'Work' })],
+    customCategories: ['Weekend', 'Home'],
+    trash: [{ todo: task({ id: 'old', category: 'Weekend' }), deletedAt: 1 }],
+  };
+  const renamed = renameCategory(data, 'Weekend', '  Plans  ', 50);
+  assert.deepEqual(renamed.customCategories, ['Plans', 'Home']);
+  assert.equal(renamed.todos[0].category, 'Plans');
+  assert.equal(renamed.todos[0].updatedAt, 50);
+  assert.equal(renamed.todos[1].category, 'Work');
+  assert.equal(renamed.trash[0].todo.category, 'Plans');
+  const cased = renameCategory(renamed, 'Plans', 'plans', 60);
+  assert.deepEqual(cased.customCategories, ['plans', 'Home']);
+  assert.equal(renameCategory(cased, 'plans', 'plans'), cased);
+  assert.throws(() => renameCategory(cased, 'plans', 'home'), /already exists/);
+  assert.throws(() => renameCategory(cased, 'plans', 'Work'), /already exists/);
+  assert.throws(() => renameCategory(cased, 'Work', 'Jobs'), /cannot be renamed/);
+  assert.throws(() => renameCategory(cased, 'Missing', 'Other'), /not found/);
+  assert.throws(() => renameCategory(cased, 'plans', '   '), /empty/);
 });
 test('special-looking category names remain independently selectable', () => {
   for (const name of ['All', 'all', 'none', 'category:Work']) {
