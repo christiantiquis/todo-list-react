@@ -46,16 +46,23 @@ export async function insertUser(email: string, passwordHash: string) {
   return result.rows[0] ?? null;
 }
 
-export type ApiTokenSummary = { id: string; label: string; createdAt: string };
+export type ApiTokenSummary = { id: string; label: string; createdAt: string; lastUsedAt: string | null };
 
-function tokenSummary(row: { id: string; label: string; created_at: Date | string }): ApiTokenSummary {
-  return { id: row.id, label: row.label, createdAt: new Date(row.created_at).toISOString() };
+type TokenRow = { id: string; label: string; created_at: Date | string; last_used_at: Date | string | null };
+
+function tokenSummary(row: TokenRow): ApiTokenSummary {
+  return {
+    id: row.id,
+    label: row.label,
+    createdAt: new Date(row.created_at).toISOString(),
+    lastUsedAt: row.last_used_at ? new Date(row.last_used_at).toISOString() : null,
+  };
 }
 
 export async function listApiTokens(userId: string): Promise<ApiTokenSummary[]> {
   await ensureDatabase();
-  const result = await getPool().query<{ id: string; label: string; created_at: Date }>(
-    "SELECT id, label, created_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at DESC, id DESC",
+  const result = await getPool().query<TokenRow>(
+    "SELECT id, label, created_at, last_used_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at DESC, id DESC",
     [userId],
   );
   return result.rows.map(tokenSummary);
@@ -63,8 +70,8 @@ export async function listApiTokens(userId: string): Promise<ApiTokenSummary[]> 
 
 export async function insertApiToken(userId: string, tokenHash: string, label: string): Promise<ApiTokenSummary> {
   await ensureDatabase();
-  const result = await getPool().query<{ id: string; label: string; created_at: Date }>(
-    "INSERT INTO api_tokens (user_id, token_hash, label) VALUES ($1, $2, $3) RETURNING id, label, created_at",
+  const result = await getPool().query<TokenRow>(
+    "INSERT INTO api_tokens (user_id, token_hash, label) VALUES ($1, $2, $3) RETURNING id, label, created_at, last_used_at",
     [userId, tokenHash, label],
   );
   return tokenSummary(result.rows[0]);
@@ -82,7 +89,7 @@ export async function deleteApiToken(userId: string, id: string): Promise<boolea
 export async function findUserIdByTokenHash(tokenHash: string): Promise<string | null> {
   await ensureDatabase();
   const result = await getPool().query<{ user_id: string }>(
-    "SELECT user_id FROM api_tokens WHERE token_hash = $1",
+    "UPDATE api_tokens SET last_used_at = now() WHERE token_hash = $1 RETURNING user_id",
     [tokenHash],
   );
   return result.rows[0]?.user_id ?? null;

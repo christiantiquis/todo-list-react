@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type ListedToken = { id: string; label: string; createdAt: string };
+type ListedToken = { id: string; label: string; createdAt: string; lastUsedAt: string | null };
 
 export function ApiTokensPanel() {
   const [tokens, setTokens] = useState<ListedToken[]>([]);
@@ -49,7 +49,7 @@ export function ApiTokensPanel() {
         setError(body.error ?? "The token could not be created.");
         return;
       }
-      setTokens(current => [{ id: body.id, label: body.label, createdAt: body.createdAt }, ...current.filter(item => item.id !== body.id)]);
+      setTokens(current => [{ id: body.id, label: body.label, createdAt: body.createdAt, lastUsedAt: body.lastUsedAt ?? null }, ...current.filter(item => item.id !== body.id)]);
       setRevealed(body.token);
       setLabel("");
     } catch {
@@ -101,6 +101,7 @@ export function ApiTokensPanel() {
                 <span className="min-w-0">
                   <span className="block break-words text-sm">{token.label}</span>
                   <span className="block text-xs text-muted-foreground">Created {format(new Date(token.createdAt), "MMM d, yyyy")}</span>
+                  <span className="block text-xs text-muted-foreground">{token.lastUsedAt ? `Last used ${format(new Date(token.lastUsedAt), "MMM d, yyyy, h:mm a")}` : "Not used yet"}</span>
                 </span>
                 <Button type="button" variant="ghost" size="icon" aria-label={`Revoke ${token.label}`} disabled={working} onClick={() => { void revoke(token.id); }}>
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
