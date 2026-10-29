@@ -44,8 +44,16 @@ test('editing trims text, clears optional fields, and leaves other tasks untouch
   assert.equal(result[0].category, undefined);
   assert.equal(result[0].dueDate, undefined);
   assert.equal(result[0].agent, 'cursor');
+  assert.equal(result[0].note, undefined);
   assert.equal(result[1], other);
+  const noted = editTodo(result, 'one', 'Updated', 'Work', 123, '  Call before noon.  ');
+  assert.equal(noted[0].note, 'Call before noon.');
+  assert.equal(noted[0].category, 'Work');
+  const cleared = editTodo(noted, 'one', 'Updated', 'Work', 123, '   ');
+  assert.equal(cleared[0].note, undefined);
   assert.throws(() => editTodo(result, 'one', '  '), /empty/);
+  assert.throws(() => editTodo(result, 'one', 'Updated', undefined, undefined, 'x'.repeat(2001)), /2,000/);
+  assert.deepEqual(selectTodos([task({ id: 'noted', note: 'Bring the invoice' }), task({ id: 'other' })], 'invoice', 'all', 'All', 'all', 'default', new Date()).map(todo => todo.id), ['noted']);
 });
 test('category deletion removes assignments but protects built-in categories', () => {
   const data = { todos: [task({ category: 'All' }), task({ id: 'two', category: 'Work' })], customCategories: ['All'] };
@@ -262,6 +270,8 @@ test('agent tasks keep their owner through save, reload, and backup', () => {
   const created = addAgentTask(emptyTodoData(), { text: '  Ship export  ', list: 'billing-app', agent: ' cursor ' }, now, 'task-1');
   assert.equal(created.task.text, 'Ship export');
   assert.equal(created.task.agent, 'cursor');
+  assert.equal(addAgentTask(emptyTodoData(), { text: 'Noted', note: '  Bring the file.  ' }, now, 'task-2').task.note, 'Bring the file.');
+  assert.throws(() => addAgentTask(emptyTodoData(), { text: 'Noted', note: 'x'.repeat(2001) }), (error) => error.status === 400);
   assert.equal(created.task.category, 'billing-app');
   assert.deepEqual(created.data.customCategories, ['billing-app']);
   saveTodoData(saved, created.data);

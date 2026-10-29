@@ -292,11 +292,11 @@ export function useTodos() {
         } : todo) };
       });
     },
-    async edit(id: string, text: string, category: string | undefined, dueDate: number | undefined, expected: Todo) {
+    async edit(id: string, text: string, category: string | undefined, dueDate: number | undefined, note: string, expected: Todo) {
       return !(await mutate(current => {
         assertTaskUnchanged(current, expected);
         validCategory(current, category);
-        return { ...current, todos: editTodo(current.todos, id, text, category, dueDate) };
+        return { ...current, todos: editTodo(current.todos, id, text, category, dueDate, note) };
       }));
     },
     remove(id: string) { return remove([id]); },

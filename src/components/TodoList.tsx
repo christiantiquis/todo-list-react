@@ -123,7 +123,7 @@ export function TodoList() {
         <span className="text-xs text-muted-foreground">{items.length}</span>
       </div>
       <div className="overflow-hidden rounded-xl border bg-card divide-y">
-        {items.map(todo => <TodoItem key={todo.id} todo={todo} now={now} availableCategories={store.categories} onToggle={store.toggle} onDelete={store.remove} onEdit={(id, value, list, due, expected) => store.edit(id, value, decodeCategory(list), due, expected)} />)}
+        {items.map(todo => <TodoItem key={todo.id} todo={todo} now={now} availableCategories={store.categories} onToggle={store.toggle} onDelete={store.remove} onEdit={(id, value, list, due, note, expected) => store.edit(id, value, decodeCategory(list), due, note, expected)} />)}
       </div>
     </section>
   );
