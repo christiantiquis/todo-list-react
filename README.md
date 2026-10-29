@@ -36,7 +36,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;
 **All Tasks** is where you can find everything. Upcoming shows active tasks due
-after today. The address bar keeps the view you selected, so refreshing opens that same page. My Day uses the plain address. Deadlines use your browser's local calendar, and undated tasks sort
+after today. The address bar keeps the view you selected, so refreshing opens that same page. My Day uses the plain address. Filter by agent to see one owner, or only tasks that no agent has claimed. Deadlines use your browser's local calendar, and undated tasks sort
 last when sorting by due date. Search applies only to the current view.
 
 ## Where your tasks are saved
