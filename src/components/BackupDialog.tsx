@@ -1,13 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Archive, Download, Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import type { TodoStore } from "@/hooks/use-todos";
 import { MAX_BACKUP_BYTES, mergeBackup, parseBackup, type TodoData } from "@/lib/todo-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export function BackupDialog({ store }: { store: TodoStore }) {
   const [incoming, setIncoming] = useState<TodoData | null>(null);
@@ -53,12 +52,7 @@ export function BackupDialog({ store }: { store: TodoStore }) {
       } else setError("Nothing was imported. Resolve the saving warning and retry.");
     } finally { setWorking(false); }
   };
-  return <Dialog onOpenChange={() => {
-    request.current++; setIncoming(null); setFilename(""); setError(""); setReading(false);
-  }}>
-    <DialogTrigger asChild><Button disabled={!store.loaded} variant="ghost" className="h-10 w-full justify-start gap-2.5 rounded-none px-3 text-sm text-muted-foreground"><Archive className="h-4 w-4" />Data & backup</Button></DialogTrigger>
-    <DialogContent className="max-h-[85dvh] max-w-[calc(100%-2rem)] overflow-y-auto sm:max-w-lg">
-      <DialogHeader><DialogTitle>Data & backup</DialogTitle><DialogDescription>Download a copy of your tasks, lists, and Trash. Keep it somewhere safe so you can restore it later.</DialogDescription></DialogHeader>
+  return <div className="space-y-4">
       <section className="space-y-3 rounded-xl border p-4" aria-label="Export backup">
         <h3 className="text-sm font-medium">Take your tasks with you</h3>
         <p className="text-xs leading-relaxed text-muted-foreground">Backups are readable JSON files. They stay on your device and include tasks in Trash that have not expired.</p>
@@ -72,7 +66,6 @@ export function BackupDialog({ store }: { store: TodoStore }) {
         {incoming && <div className="space-y-3" role="status"><p className="break-words text-xs text-muted-foreground">{filename}: {addedTasks} new tasks and {addedTrash} Trash items. {incoming.todos.length + incoming.trash.length - addedTasks - addedTrash} existing tasks will be skipped. Missing lists will be added.</p><Button onClick={() => { void importFile(); }} disabled={working || store.busy || !store.writable}><Upload className="mr-2 h-4 w-4" />{working ? "Importing…" : "Merge backup"}</Button></div>}
       </section>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <p className="text-xs leading-relaxed text-muted-foreground">Storage is still local to this browser. Clearing site data also removes Trash and recovery copies; downloaded backups are separate.</p>
-    </DialogContent>
-  </Dialog>;
+      <p className="text-xs leading-relaxed text-muted-foreground">Clearing site data also removes Trash and recovery copies in this browser. Downloaded backups are separate.</p>
+    </div>;
 }

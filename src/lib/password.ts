@@ -1,1 +1,1 @@
-export { hashPassword, verifyPassword } from "./password.mjs";
+export { hashPassword, minimumPasswordLength, verifyPassword } from "./password.mjs";

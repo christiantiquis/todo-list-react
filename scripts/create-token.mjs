@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import { createApiToken, hashApiToken } from "../src/lib/api-token.mjs";
+import { createApiToken, hashApiToken, normalizeApiTokenLabel } from "../src/lib/api-token.mjs";
 
 const email = process.env.EMAIL?.trim().toLowerCase() ?? "";
-const label = process.env.LABEL?.trim() ?? "";
+const label = normalizeApiTokenLabel(process.env.LABEL ?? "") ?? "";
 if (!process.env.DATABASE_URL) {
   console.error("Set DATABASE_URL.");
   process.exit(1);
