@@ -7,3 +7,10 @@ export function createApiToken() {
 export function hashApiToken(token) {
   return createHash("sha256").update(String(token)).digest("hex");
 }
+
+export function normalizeApiTokenLabel(value) {
+  if (typeof value !== "string") return null;
+  const label = value.trim();
+  if (!label || label.length > 64) return null;
+  return label;
+}
