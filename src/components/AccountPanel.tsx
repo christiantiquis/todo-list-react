@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ApiTokensDialog } from "@/components/ApiTokensDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { TodoStore } from "@/hooks/use-todos";
@@ -35,7 +36,8 @@ export function AccountPanel({ store }: { store: TodoStore }) {
           </div>
         </div>
         <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">Your tasks are saved to your account.</p>
-        <Button type="button" variant="outline" size="sm" className="mt-3 w-full" disabled={store.busy} onClick={() => { void store.logout(); }}>Log out</Button>
+        <ApiTokensDialog />
+        <Button type="button" variant="outline" size="sm" className="mt-2 w-full" disabled={store.busy} onClick={() => { void store.logout(); }}>Log out</Button>
       </div>
     );
   }

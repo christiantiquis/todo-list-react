@@ -178,7 +178,7 @@ so the homelab image does not use a static export.
 
 ## Agent API
 
-Agents share the signed-in account. They do not read guest tasks stored only in a browser. Create a token on the server, the same way an account is created. The token is printed once. Store it outside the chat, in `TODOLIZT_TOKEN`.
+Agents share the signed-in account. They do not read guest tasks stored only in a browser. While signed in, open **API tokens** in the account panel to create or revoke a token. A new token is shown once. Revoking it stops that token immediately. You can also create one on the server, the same way an account is created. Store the token outside the chat, in `TODOLIZT_TOKEN`.
 
 ```sh
 docker exec -e EMAIL=you@example.com -e LABEL=agents todolizt node scripts/create-token.mjs
