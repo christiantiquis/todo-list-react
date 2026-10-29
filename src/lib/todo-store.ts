@@ -286,6 +286,12 @@ export function selectTodos(todos: Todo[], search: string, category: string, sta
       sort === "due-date" ? (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || b.createdAt - a.createdAt : b.createdAt - a.createdAt);
 }
 
+const builtinViews = new Set(["day", "all", "upcoming", "trash", "completed"]);
+export function workspaceView(value: string | null | undefined) {
+  const list = value ? decodeCategory(value) : undefined;
+  if (value && (builtinViews.has(value) || (list && value === categoryValue(list)))) return value;
+  return "day";
+}
 export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date) {
   if (view === "settings") return [];
   const tasks = todos.filter(todo => {
