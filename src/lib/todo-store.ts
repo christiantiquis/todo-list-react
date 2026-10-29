@@ -147,6 +147,13 @@ export function parseBackup(raw: string, now = Date.now()): TodoData {
   if (!backup.success) throw new Error("This is not a supported TodoLizt backup, or its task data is invalid. No tasks were changed.");
   return pruneTrash(backup.data.data, now);
 }
+export function mergeGuestTasks(account: TodoData, guest: TodoData, now = Date.now()) {
+  const current = pruneTrash(account, now);
+  const data = mergeBackup(current, guest, now);
+  const tasks = data.todos.length - current.todos.length + data.trash.length - current.trash.length;
+  const lists = data.customCategories.filter(name => !current.customCategories.includes(name)).length;
+  return { data, tasks, lists };
+}
 export function mergeBackup(current: TodoData, incoming: TodoData, now = Date.now()): TodoData {
   const existing = new Set([...current.todos.map(todo => todo.id), ...current.trash.map(entry => entry.todo.id)]);
   const todos = incoming.todos.filter(todo => !existing.has(todo.id));

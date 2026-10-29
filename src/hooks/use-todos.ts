@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   assertTaskUnchanged, commitTodoChange, createBackup, DATA_KEY, deleteCategory, renameCategory,
-  editTodo, emptyTodoData, loadTodoData, mergeBackup, nextTodoData, parseTodoData, predefinedCategories,
+  editTodo, emptyTodoData, loadTodoData, mergeBackup, mergeGuestTasks, nextTodoData, parseTodoData, predefinedCategories,
   pruneTrash, restoreTrash, saveTodoData, trashTodos, TodoConflictError, type TodoData,
 } from "@/lib/todo-store";
 import type { Todo } from "@/types/todo";
@@ -241,6 +241,8 @@ export function useTodos() {
     ...data, trash: pruneTrash(data).trash, loaded, writable, busy: pending > 0, accountEmail,
     storageMessage: [storageMessage, saveError].filter(Boolean).join(" "), categories,
     async login(email: string, password: string) {
+      let guest = emptyTodoData();
+      try { guest = loadTodoData(localStorage).data; } catch { guest = emptyTodoData(); }
       startWork();
       try {
         const response = await fetch("/api/login", {
@@ -255,6 +257,14 @@ export function useTodos() {
         setWritable(true);
         setStorageMessage("");
         setSaveError("");
+        const preview = mergeGuestTasks(dataRef.current, guest);
+        if (preview.tasks || preview.lists) {
+          const error = await mutate(current => mergeGuestTasks(current, guest).data, false);
+          if (error) {
+            try { localStorage.setItem(`${DATA_KEY}.guest-recovery`, JSON.stringify(guest)); } catch { /* The account copy remains available. */ }
+            toast.error("Signed in, but browser tasks could not be added. A recovery copy was kept in this browser.");
+          } else toast.success(preview.tasks === 1 && !preview.lists ? "1 browser task was added to your account." : preview.tasks > 0 ? `${preview.tasks} browser tasks were added to your account.` : preview.lists === 1 ? "1 browser list was added to your account." : `${preview.lists} browser lists were added to your account.`);
+        }
         return "";
       } catch {
         account.current = false;
