@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  assertTaskUnchanged, commitTodoChange, createBackup, DATA_KEY, deleteCategory,
+  assertTaskUnchanged, commitTodoChange, createBackup, DATA_KEY, deleteCategory, renameCategory,
   editTodo, emptyTodoData, loadTodoData, mergeBackup, mergeGuestTasks, nextTodoData, parseTodoData, predefinedCategories, taskPriority,
   pruneTrash, restoreTrash, saveTodoData, trashTodos, TodoConflictError, type TodoData,
 } from "@/lib/todo-store";
