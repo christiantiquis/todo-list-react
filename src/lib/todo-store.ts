@@ -238,6 +238,16 @@ export function releaseAgentTask(data: TodoData, id: string, agent: string, now 
   delete task.agent;
   return { data: replaceTask(data, task), task };
 }
+export function deleteAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
+  const name = agentName(agent);
+  const todo = activeTask(data, id);
+  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
+  const task: Todo = { ...todo, agent: name, updatedAt: now };
+  return { data: trashTodos(replaceTask(data, task), [id], now), task };
+}
+export function findAgentTask(data: TodoData, id: string) {
+  return data.todos.find(todo => todo.id === id) ?? data.trash.find(entry => entry.todo.id === id)?.todo;
+}
 export function selectAgentTasks(todos: Todo[], status: "open" | "done" | "all", agent?: string) {
   return todos.filter(todo =>
     (status === "all" || (status === "done" ? todo.completed : !todo.completed)) &&

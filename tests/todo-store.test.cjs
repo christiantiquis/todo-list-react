@@ -236,7 +236,7 @@ test('compare-before-save rejects a writer that changes the snapshot without the
   assert.equal(loadTodoData(saved).data.todos[0].text, 'Newer');
 });
 const {
-  addAgentTask, claimAgentTask, completeAgentTask, releaseAgentTask, selectAgentTasks, agentDueDate, AgentTaskError,
+  addAgentTask, claimAgentTask, completeAgentTask, releaseAgentTask, deleteAgentTask, findAgentTask, selectAgentTasks, agentDueDate, AgentTaskError,
 } = require('../src/lib/todo-store.ts');
 test('agent tasks keep their owner through save, reload, and backup', () => {
   const saved = storage();
@@ -279,6 +279,22 @@ test('claim, complete, and release follow the owning agent', () => {
   assert.equal(agentDueDate('2026-10-29'), Date.parse('2026-10-29T00:00:00.000Z'));
   assert.equal(agentDueDate(undefined), undefined);
   assert.throws(() => agentDueDate('tomorrow'), (error) => error.status === 400);
+});
+test('delete moves an owned task to trash and keeps it out of the active list', () => {
+  const created = addAgentTask(emptyTodoData(), { text: 'Open', agent: 'cursor' }, now, 'task-1');
+  const removed = deleteAgentTask(created.data, 'task-1', 'cursor', now + 1);
+  assert.equal(removed.data.todos.length, 0);
+  assert.deepEqual(removed.data.trash, [{ todo: { ...created.task, agent: 'cursor', updatedAt: now + 1 }, deletedAt: now + 1 }]);
+  assert.equal(findAgentTask(removed.data, 'task-1').text, 'Open');
+  assert.equal(selectAgentTasks(removed.data.todos, 'all').length, 0);
+  assert.throws(() => deleteAgentTask(created.data, 'task-1', 'codex'), (error) => error instanceof AgentTaskError && error.status === 409 && /cursor/.test(error.message));
+  const unowned = addAgentTask(emptyTodoData(), { text: 'Loose' }, now, 'task-2');
+  const taken = deleteAgentTask(unowned.data, 'task-2', 'cursor', now + 2);
+  assert.equal(taken.task.agent, 'cursor');
+  assert.equal(taken.data.trash[0].deletedAt, now + 2);
+  const done = completeAgentTask(created.data, 'task-1', 'cursor', now + 3);
+  assert.equal(deleteAgentTask(done.data, 'task-1', 'cursor', now + 4).task.completed, true);
+  assert.throws(() => deleteAgentTask(emptyTodoData(), 'missing', 'cursor'), (error) => error.status === 404);
 });
 test('agent task queries can select open, done, and one owner', () => {
   const open = task({ agent: 'cursor' });
