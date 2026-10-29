@@ -14,6 +14,7 @@ const todoSchema = z.object({
   updatedAt: timestamp.optional(), completedAt: timestamp.optional(), dueDate: timestamp.optional(),
   agent: z.string().trim().min(1).max(64).optional(),
   note: z.string().trim().min(1).max(2000).optional(),
+  finishedBy: z.string().trim().min(1).max(64).optional(),
 });
 const todosSchema = z.array(todoSchema).refine(items => new Set(items.map(item => item.id)).size === items.length);
 const categoriesSchema = z.array(z.string().trim().min(1)).transform(items =>
@@ -235,14 +236,13 @@ export function completeAgentTask(data: TodoData, id: string, agent: string, now
   const name = agentName(agent);
   const todo = activeTask(data, id);
   if (todo.completed) throw new AgentTaskError("That task is already complete.", 409);
-  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
-  const task: Todo = { ...todo, agent: name, completed: true, completedAt: now, updatedAt: now };
+  const task: Todo = { ...todo, agent: todo.agent ?? name, finishedBy: name, completed: true, completedAt: now, updatedAt: now };
   return { data: replaceTask(data, task), task };
 }
 export function releaseAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
-  const name = agentName(agent);
+  agentName(agent);
   const todo = activeTask(data, id);
-  if (todo.agent !== name) throw new AgentTaskError(todo.agent ? `Claimed by ${todo.agent}.` : "That task is not claimed by this agent.", 409);
+  if (!todo.agent) throw new AgentTaskError("That task is not claimed.", 409);
   const task: Todo = { ...todo, updatedAt: now };
   delete task.agent;
   return { data: replaceTask(data, task), task };
@@ -250,8 +250,7 @@ export function releaseAgentTask(data: TodoData, id: string, agent: string, now 
 export function deleteAgentTask(data: TodoData, id: string, agent: string, now = Date.now()) {
   const name = agentName(agent);
   const todo = activeTask(data, id);
-  if (todo.agent && todo.agent !== name) throw new AgentTaskError(`Claimed by ${todo.agent}.`, 409);
-  const task: Todo = { ...todo, agent: name, updatedAt: now };
+  const task: Todo = { ...todo, agent: todo.agent ?? name, finishedBy: todo.finishedBy ?? name, updatedAt: now };
   return { data: trashTodos(replaceTask(data, task), [id], now), task };
 }
 export function updateAgentTask(
@@ -345,15 +344,22 @@ export function selectTodos(todos: Todo[], search: string, category: string, sta
       sort === "due-date" ? (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || b.createdAt - a.createdAt : b.createdAt - a.createdAt);
 }
 
-const builtinViews = new Set(["day", "all", "upcoming", "trash", "completed"]);
+export function matchesWorkspaceAgent(agent: string | undefined, owner = "all") {
+  if (!owner || owner === "all") return true;
+  if (owner === "unclaimed") return !agent;
+  if (owner.startsWith("agent:")) return agent === owner.slice(6);
+  return agent === owner;
+}
+const builtinViews = new Set(["day", "all", "upcoming", "trash", "completed", "settings"]);
 export function workspaceView(value: string | null | undefined) {
   const list = value ? decodeCategory(value) : undefined;
   if (value && (builtinViews.has(value) || (list && value === categoryValue(list)))) return value;
   return "day";
 }
-export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date) {
+export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date, owner = "all") {
   if (view === "settings") return [];
   const tasks = todos.filter(todo => {
+    if (!matchesWorkspaceAgent(todo.agent, owner)) return false;
     if (view === "day") return ["today", "overdue"].includes(deadline(todo, now));
     if (view === "upcoming") return deadline(todo, now) === "upcoming";
     if (view === "completed") return todo.completed;
