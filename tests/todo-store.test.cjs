@@ -258,7 +258,7 @@ test('a new project list is created once and a known list is reused', () => {
   assert.deepEqual(third.data.customCategories, ['Billing-App']);
   assert.equal(third.task.category, 'Billing-App');
 });
-test('claim, complete, and release follow the owning agent', () => {
+test('claim stays exclusive while any agent can complete or release', () => {
   const created = addAgentTask(emptyTodoData(), { text: 'Open' }, now, 'task-1');
   const claimed = claimAgentTask(created.data, 'task-1', 'cursor', now + 1);
   assert.equal(claimed.task.agent, 'cursor');
@@ -267,12 +267,16 @@ test('claim, complete, and release follow the owning agent', () => {
   const done = completeAgentTask(created.data, 'task-1', 'codex', now + 3);
   assert.equal(done.task.completed, true);
   assert.equal(done.task.agent, 'codex');
+  assert.equal(done.task.finishedBy, 'codex');
   assert.equal(done.task.completedAt, now + 3);
   assert.throws(() => completeAgentTask(done.data, 'task-1', 'codex'), (error) => error.status === 409);
-  assert.throws(() => completeAgentTask(claimed.data, 'task-1', 'codex'), (error) => error.status === 409);
-  const released = releaseAgentTask(claimed.data, 'task-1', 'cursor', now + 4);
+  const finished = completeAgentTask(claimed.data, 'task-1', 'codex', now + 5);
+  assert.equal(finished.task.agent, 'cursor');
+  assert.equal(finished.task.finishedBy, 'codex');
+  assert.equal(finished.task.completed, true);
+  const released = releaseAgentTask(claimed.data, 'task-1', 'codex', now + 4);
   assert.equal(released.task.agent, undefined);
-  assert.throws(() => releaseAgentTask(released.data, 'task-1', 'cursor'), (error) => error.status === 409);
+  assert.throws(() => releaseAgentTask(released.data, 'task-1', 'cursor'), (error) => error.status === 409 && /not claimed/.test(error.message));
   assert.throws(() => claimAgentTask(created.data, 'missing', 'cursor'), (error) => error.status === 404);
   assert.throws(() => addAgentTask(emptyTodoData(), { text: '   ' }), (error) => error.status === 400);
   assert.throws(() => addAgentTask(emptyTodoData(), { text: 'Ok', agent: 'x'.repeat(65) }), (error) => error.status === 400);
@@ -284,16 +288,22 @@ test('delete moves an owned task to trash and keeps it out of the active list', 
   const created = addAgentTask(emptyTodoData(), { text: 'Open', agent: 'cursor' }, now, 'task-1');
   const removed = deleteAgentTask(created.data, 'task-1', 'cursor', now + 1);
   assert.equal(removed.data.todos.length, 0);
-  assert.deepEqual(removed.data.trash, [{ todo: { ...created.task, agent: 'cursor', updatedAt: now + 1 }, deletedAt: now + 1 }]);
+  assert.deepEqual(removed.data.trash, [{ todo: { ...created.task, agent: 'cursor', finishedBy: 'cursor', updatedAt: now + 1 }, deletedAt: now + 1 }]);
   assert.equal(findAgentTask(removed.data, 'task-1').text, 'Open');
   assert.equal(selectAgentTasks(removed.data.todos, 'all').length, 0);
-  assert.throws(() => deleteAgentTask(created.data, 'task-1', 'codex'), (error) => error instanceof AgentTaskError && error.status === 409 && /cursor/.test(error.message));
+  const removedByOther = deleteAgentTask(created.data, 'task-1', 'codex', now + 6);
+  assert.equal(removedByOther.task.agent, 'cursor');
+  assert.equal(removedByOther.task.finishedBy, 'codex');
+  assert.equal(removedByOther.data.todos.length, 0);
   const unowned = addAgentTask(emptyTodoData(), { text: 'Loose' }, now, 'task-2');
   const taken = deleteAgentTask(unowned.data, 'task-2', 'cursor', now + 2);
   assert.equal(taken.task.agent, 'cursor');
+  assert.equal(taken.task.finishedBy, 'cursor');
   assert.equal(taken.data.trash[0].deletedAt, now + 2);
   const done = completeAgentTask(created.data, 'task-1', 'cursor', now + 3);
-  assert.equal(deleteAgentTask(done.data, 'task-1', 'cursor', now + 4).task.completed, true);
+  const deletedDone = deleteAgentTask(done.data, 'task-1', 'codex', now + 4);
+  assert.equal(deletedDone.task.completed, true);
+  assert.equal(deletedDone.task.finishedBy, 'cursor');
   assert.throws(() => deleteAgentTask(emptyTodoData(), 'missing', 'cursor'), (error) => error.status === 404);
 });
 test('agent task queries can select open, done, and one owner', () => {

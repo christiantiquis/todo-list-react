@@ -190,6 +190,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, now, availableCateg
               <PopoverContent aria-label="Task details" className="text-sm">
                 <p>Added: {formatDate(todo.createdAt)}</p>
                 {todo.agent && <p>Agent: {todo.agent}</p>}
+                {todo.finishedBy && <p>Finished by: {todo.finishedBy}</p>}
                 {todo.updatedAt !== undefined && <p>Updated: {formatDate(todo.updatedAt)}</p>}
                 {todo.completedAt !== undefined && <p>Completed: {formatDate(todo.completedAt)}</p>}
                 {todo.dueDate !== undefined && <p>Due: {formatDate(todo.dueDate)}</p>}
