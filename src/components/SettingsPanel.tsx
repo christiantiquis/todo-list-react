@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { ApiTokensPanel } from "@/components/ApiTokensDialog";
 import { BackupDialog } from "@/components/BackupDialog";
+import { PasswordForm } from "@/components/PasswordForm";
 import { Button } from "@/components/ui/button";
 import type { TodoStore } from "@/hooks/use-todos";
 
@@ -38,6 +39,7 @@ export function SettingsPanel({ store }: { store: TodoStore }) {
           <>
             <p className="mt-1 break-all text-sm">{store.accountEmail}</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tasks are saved to this account.</p>
+            <PasswordForm />
             <Button type="button" variant="outline" size="sm" className="mt-4" disabled={store.busy} onClick={() => { void store.logout(); }}>Log out</Button>
           </>
         ) : (
