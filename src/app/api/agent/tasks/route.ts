@@ -18,8 +18,12 @@ export async function GET(request: Request) {
     }
     const agentQuery = url.searchParams.get("agent");
     const agent = agentQuery ? agentName(agentQuery) : undefined;
+    const listQuery = url.searchParams.get("list");
+    if (listQuery !== null && listQuery.trim() === "") {
+      return NextResponse.json({ error: "List name is not valid." }, { status: 400 });
+    }
     const document = await readDocument(auth.userId);
-    return NextResponse.json({ tasks: selectAgentTasks(document.data.todos, status as typeof statuses[number], agent) });
+    return NextResponse.json({ tasks: selectAgentTasks(document.data.todos, status as typeof statuses[number], agent, listQuery ?? undefined) });
   } catch (error) {
     return agentFailure(error);
   }

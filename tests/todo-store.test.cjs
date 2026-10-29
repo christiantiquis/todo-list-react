@@ -96,7 +96,7 @@ test('undo preserves intervening tasks without duplicates or deleted categories'
   assert.equal(restored[1].category, undefined);
   assert.equal(restoreTodos(restored, removed, ['Work']).length, 2);
 });
-const { workspaceTodos } = require('../src/lib/todo-store.ts');
+const { workspaceTodos, workspaceView } = require('../src/lib/todo-store.ts');
 test('workspace views separate daily, upcoming, completed, and list tasks', () => {
   const now = new Date(2026, 9, 27, 12);
   const tasks = [
@@ -112,7 +112,14 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
   assert.deepEqual(ids('completed'), ['done']);
   assert.deepEqual(ids(categoryValue('Work')), ['old', 'done']);
   assert.equal(ids('all').length, 5);
+  assert.deepEqual(ids('settings'), []);
   assert.equal(workspaceTodos(tasks, 'day', 'missing', 'default', now).length, 0);
+  assert.equal(workspaceView(null), 'day');
+  assert.equal(workspaceView('completed'), 'completed');
+  assert.equal(workspaceView('settings'), 'settings');
+  assert.equal(workspaceView(categoryValue('Weekend projects')), 'category:Weekend projects');
+  assert.equal(workspaceView('missing'), 'day');
+  assert.equal(workspaceView('category:'), 'day');
 });
 const {
   DATA_KEY, TRASH_RETENTION_MS, MAX_BACKUP_BYTES, emptyTodoData, trashTodos,
@@ -250,7 +257,7 @@ test('compare-before-save rejects a writer that changes the snapshot without the
   assert.equal(loadTodoData(saved).data.todos[0].text, 'Newer');
 });
 const {
-  addAgentTask, claimAgentTask, completeAgentTask, releaseAgentTask, deleteAgentTask, findAgentTask, selectAgentTasks, agentDueDate, AgentTaskError,
+  addAgentTask, claimAgentTask, completeAgentTask, releaseAgentTask, deleteAgentTask, updateAgentTask, findAgentTask, selectAgentTasks, agentDueDate, AgentTaskError,
 } = require('../src/lib/todo-store.ts');
 test('agent tasks keep their owner through save, reload, and backup', () => {
   const saved = storage();
@@ -312,6 +319,31 @@ test('delete moves an owned task to trash and keeps it out of the active list', 
   assert.equal(deleteAgentTask(done.data, 'task-1', 'cursor', now + 4).task.completed, true);
   assert.throws(() => deleteAgentTask(emptyTodoData(), 'missing', 'cursor'), (error) => error.status === 404);
 });
+test('an agent can update text, list, and due date on a task it owns', () => {
+  const created = addAgentTask(emptyTodoData(), { text: 'Open', list: 'billing-app', dueDate: 50, agent: 'cursor' }, now, 'task-1');
+  const renamed = updateAgentTask(created.data, 'task-1', { agent: 'cursor', text: '  Ship it  ' }, now + 1);
+  assert.equal(renamed.task.text, 'Ship it');
+  assert.equal(renamed.task.category, 'billing-app');
+  assert.equal(renamed.task.dueDate, 50);
+  assert.equal(renamed.task.updatedAt, now + 1);
+  const moved = updateAgentTask(renamed.data, 'task-1', { agent: 'cursor', list: 'work', dueDate: null }, now + 2);
+  assert.equal(moved.task.category, 'Work');
+  assert.equal(moved.task.dueDate, undefined);
+  assert.equal(moved.task.text, 'Ship it');
+  const cleared = updateAgentTask(moved.data, 'task-1', { agent: 'cursor', list: '  ' }, now + 3);
+  assert.equal(cleared.task.category, undefined);
+  const added = updateAgentTask(cleared.data, 'task-1', { agent: 'cursor', list: 'Notes' }, now + 4);
+  assert.equal(added.task.category, 'Notes');
+  assert.deepEqual(added.data.customCategories, ['billing-app', 'Notes']);
+  const loose = addAgentTask(emptyTodoData(), { text: 'Loose' }, now, 'task-2');
+  assert.equal(updateAgentTask(loose.data, 'task-2', { agent: 'cursor', text: 'Mine' }, now + 5).task.agent, 'cursor');
+  assert.throws(() => updateAgentTask(created.data, 'task-1', { agent: 'codex', text: 'Nope' }), (error) => error instanceof AgentTaskError && error.status === 409 && /cursor/.test(error.message));
+  const done = completeAgentTask(created.data, 'task-1', 'cursor', now + 6);
+  assert.throws(() => updateAgentTask(done.data, 'task-1', { agent: 'cursor', text: 'Later' }), (error) => error.status === 409);
+  assert.throws(() => updateAgentTask(created.data, 'task-1', { agent: 'cursor', text: '   ' }), (error) => error.status === 400);
+  assert.throws(() => updateAgentTask(created.data, 'task-1', { agent: 'cursor' }), (error) => error.status === 400);
+  assert.throws(() => updateAgentTask(emptyTodoData(), 'missing', { agent: 'cursor', text: 'Nope' }), (error) => error.status === 404);
+});
 test('agent task queries can select open, done, and one owner', () => {
   const open = task({ agent: 'cursor' });
   const done = task({ id: 'two', completed: true, agent: 'codex' });
@@ -319,4 +351,8 @@ test('agent task queries can select open, done, and one owner', () => {
   assert.deepEqual(selectAgentTasks([open, done, other], 'open', 'cursor').map(todo => todo.id), ['one', 'three']);
   assert.deepEqual(selectAgentTasks([open, done, other], 'done').map(todo => todo.id), ['two']);
   assert.equal(selectAgentTasks([open, done, other], 'all').length, 3);
+  const billing = task({ id: 'bill', category: 'Billing-App', agent: 'cursor' });
+  const wallet = task({ id: 'wallet', category: 'ctwallet', agent: 'cursor' });
+  assert.deepEqual(selectAgentTasks([billing, wallet, open], 'open', 'cursor', ' billing-app ').map(todo => todo.id), ['bill']);
+  assert.deepEqual(selectAgentTasks([billing, wallet], 'all', undefined, 'missing').map(todo => todo.id), []);
 });
