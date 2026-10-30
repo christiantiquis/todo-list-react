@@ -406,8 +406,10 @@ export function workspaceView(value: string | null | undefined) {
 }
 export function workspaceTodos(todos: Todo[], view: string, search: string, sort: string, now: Date, owner = "all") {
   if (view === "settings") return [];
+  const searching = search.trim().length > 0;
   const tasks = todos.filter(todo => {
     if (!matchesWorkspaceAgent(todo.agent, owner)) return false;
+    if (searching) return true;
     if (view === "day") return ["today", "overdue"].includes(deadline(todo, now));
     if (view === "upcoming") return deadline(todo, now) === "upcoming";
     if (view === "completed") return todo.completed;

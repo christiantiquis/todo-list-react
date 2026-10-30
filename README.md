@@ -19,7 +19,7 @@ exportable backups, a 30-day Trash, and protection against conflicting tab edits
 - **Pending tasks:** Put a task on hold with its pause button and resume it with play. Pending tasks have their own view and stay out of My Day and Upcoming. They remain in All Tasks, their lists, backups, and search. Completing a pending task clears the hold.
 - **Task management:** Add, edit, complete, and delete tasks with optional lists, due dates, notes, and priorities.
 - **Organized views:** Switch between All Tasks, Upcoming, Completed, Trash, Settings, and your lists.
-- **Search and sorting:** Search task text and notes within the current view; sort by deadline, priority, newest first, or alphabetically.
+- **Search and sorting:** Search task text and notes across every list; sort by deadline, priority, newest first, or alphabetically.
 - **Custom lists:** Create your own lists alongside Work, Personal, and Shopping.
 - **Recoverable deletion:** Restore individual tasks or matching groups from Trash for 30 days, with a quick Undo after deletion.
 - **Portable backups:** Export JSON backups and preview validated imports before merging them.
@@ -38,7 +38,11 @@ New tasks inherit today's date in My Day, tomorrow's date in Upcoming, and the
 selected list when you are browsing a list. My Day excludes undated tasks;
 **All Tasks** is where you can find everything. Upcoming shows active tasks due
 after today. The address bar keeps the view you selected, so refreshing opens that same page. My Day uses the plain address. Filter by agent to see one owner, or only tasks that no agent has claimed. Deadlines use your browser's local calendar, and undated tasks sort
-last when sorting by due date. Sorting by priority puts high first and leaves tasks with no priority last. Search matches task text and notes in the current view. A note can be up to 2,000 characters, and clearing it removes the note.
+last when sorting by due date. Sorting by priority puts high first and leaves tasks with no priority last. Search matches task text and notes in every list, including tasks outside the current view. Clearing the search returns to that view. Trash search stays inside Trash. A note can be up to 2,000 characters, and clearing it removes the note.
+
+## Keyboard shortcuts
+
+Press **Alt+N** to focus the new-task field (opens All Tasks when the current view has no composer), then **Enter** to add it. Tab to a task row and press **Ctrl+Enter** (Mac: **⌘+Enter**) to complete or reopen it, or **Ctrl+Backspace** (Mac: **⌘+Backspace**) to move it to Trash. Deleted tasks keep the usual Undo action. Shortcuts ignore typing fields, open dialogs/menus, key repeats, and text composition; task actions require focus on the row itself.
 
 ## Where your tasks are saved
 
