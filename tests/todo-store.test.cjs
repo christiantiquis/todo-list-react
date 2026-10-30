@@ -143,6 +143,9 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
   assert.equal(ids('all').length, 5);
   assert.deepEqual(ids('settings'), []);
   assert.equal(workspaceTodos(tasks, 'day', 'missing', 'default', now).length, 0);
+  assert.deepEqual(workspaceTodos(tasks, 'day', 'milk', 'default', now).map(todo => todo.id), ['old', 'today', 'future', 'done', 'undated']);
+  assert.deepEqual(workspaceTodos(tasks, categoryValue('Work'), 'milk', 'default', now).map(todo => todo.id), ['old', 'today', 'future', 'done', 'undated']);
+  assert.deepEqual(workspaceTodos(tasks, 'upcoming', 'Buy', 'default', now).map(todo => todo.id), ['old', 'today', 'future', 'done', 'undated']);
   const owned = [
     task({ id: 'mine', agent: 'cursor', dueDate: new Date(2026, 9, 27).getTime() }),
     task({ id: 'theirs', agent: 'codex', dueDate: new Date(2026, 9, 27).getTime() }),
@@ -150,6 +153,7 @@ test('workspace views separate daily, upcoming, completed, and list tasks', () =
     task({ id: 'named-all', agent: 'all', dueDate: new Date(2026, 9, 27).getTime() }),
   ];
   assert.deepEqual(workspaceTodos(owned, 'day', '', 'due-date', now, 'agent:cursor').map(todo => todo.id), ['mine']);
+  assert.deepEqual(workspaceTodos(owned, 'upcoming', 'milk', 'default', now, 'agent:cursor').map(todo => todo.id), ['mine']);
   assert.deepEqual(workspaceTodos(owned, 'day', '', 'due-date', now, 'unclaimed').map(todo => todo.id), ['free']);
   assert.deepEqual(workspaceTodos(owned, 'day', '', 'due-date', now, 'agent:all').map(todo => todo.id), ['named-all']);
   assert.equal(workspaceTodos(owned, 'day', '', 'due-date', now).length, 4);

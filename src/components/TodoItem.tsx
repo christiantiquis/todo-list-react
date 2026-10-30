@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Trash2, Pencil, Save, X, Info, CalendarIcon, Pause, Play } from "lucide-react";
 import { categoryValue, deadline, priorityLabel } from "@/lib/todo-store";
+import { keyboardShortcut, shortcutContext } from "@/lib/keyboard-shortcuts";
 import type { Todo } from "@/types/todo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { format } from "date-fns";
 
 type TodoItemProps = {
   todo: Todo;
+  disabled?: boolean;
   onToggle: (id: string) => void;
   onPending: (id: string, pending: boolean) => void;
   onDelete: (id: string) => void;
@@ -25,7 +27,7 @@ type TodoItemProps = {
   availableCategories: string[];
 };
 
-export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, availableCategories }: TodoItemProps) {
+export function TodoItem({ todo, disabled = false, onToggle, onPending, onDelete, onEdit, now, availableCategories }: TodoItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [original, setOriginal] = useState(todo);
   const [saving, setSaving] = useState(false);
@@ -85,13 +87,30 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
   };
 
   return (
-    <div className="group flex min-w-0 flex-col gap-2 p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start">
+    <div
+      role="group"
+      aria-label={`Task: ${todo.text}`}
+      aria-keyshortcuts="Control+Enter Meta+Enter Control+Backspace Meta+Backspace"
+      tabIndex={0}
+      className="group flex min-w-0 flex-col gap-2 p-4 transition-colors hover:bg-muted/30 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:flex-row sm:items-start"
+      onKeyDown={event => {
+        const action = keyboardShortcut(event.nativeEvent, {
+          ...shortcutContext(event.target), writable: !disabled && !isEditing,
+          taskFocused: event.target === event.currentTarget,
+        });
+        if (action !== "complete" && action !== "delete") return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (action === "complete") onToggle(todo.id);
+        else onDelete(todo.id);
+      }}
+    >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
         <Checkbox
           id={`todo-${todo.id}`}
           checked={todo.completed}
           onCheckedChange={() => onToggle(todo.id)}
-          disabled={isEditing}
+          disabled={isEditing || disabled}
           aria-label={`Mark ${todo.text} ${todo.completed ? "active" : "complete"}`}
         />
         {isEditing ? (
@@ -217,7 +236,7 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
           </>
         ) : (
           <>
-            {!todo.completed && <Button variant="ghost" size="icon" onClick={() => onPending(todo.id, !todo.pending)} aria-label={`${todo.pending ? "Resume" : "Put on hold:"} ${todo.text}`} title={todo.pending ? "Resume task" : "Put task on hold"}>{todo.pending ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</Button>}
+            {!todo.completed && <Button variant="ghost" size="icon" disabled={disabled} onClick={() => onPending(todo.id, !todo.pending)} aria-label={`${todo.pending ? "Resume" : "Put on hold:"} ${todo.text}`} title={todo.pending ? "Resume task" : "Put task on hold"}>{todo.pending ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}</Button>}
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={`Details for ${todo.text}`}><Info className="h-4 w-4" /></Button>
@@ -245,11 +264,11 @@ export function TodoItem({ todo, onToggle, onPending, onDelete, onEdit, now, ava
                 setError(""); setIsEditing(true);
               }}
               aria-label="Edit todo"
-              disabled={todo.completed}
+              disabled={todo.completed || disabled}
             >
               <Pencil className="h-4 w-4 text-muted-foreground" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label={`Delete ${todo.text}`} onClick={() => onDelete(todo.id)}>
+            <Button variant="ghost" size="icon" aria-label={`Delete ${todo.text}`} disabled={disabled} onClick={() => onDelete(todo.id)}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </>
